@@ -28,9 +28,7 @@ export async function addToRoster(gameId: number, formData: FormData) {
   }
 
   try {
-    await api(`games/${gameId}/roster`, "POST", {
-      roster: [{ playerId, capNumber }],
-    });
+    await api(`games/${gameId}/roster`, "POST", { playerId, capNumber });
     revalidatePath(`/games/${gameId}`);
     return { success: true };
   } catch (err: any) {

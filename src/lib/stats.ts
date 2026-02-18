@@ -30,6 +30,7 @@ export async function createStat(gameId: number, formData: FormData) {
   const type = formData.get("type") as string;
   const context = formData.get("context") as string;
   const period = Number(formData.get("period")) || undefined;
+  const clock = formData.get("clock") ? Number(formData.get("clock")) : undefined;
 
   if (!playerId || !type) {
     return { error: "Player and event type are required" };
@@ -41,11 +42,32 @@ export async function createStat(gameId: number, formData: FormData) {
       type,
       context: context || undefined,
       period,
+      clock,
     });
     revalidatePath(`/games/${gameId}`);
     return { success: true };
   } catch (err: any) {
     return { error: err.message || "Failed to record stat" };
+  }
+}
+
+export async function updateStat(
+  gameId: number,
+  statId: number,
+  data: {
+    playerId?: number;
+    type?: string;
+    context?: string;
+    period?: number;
+    clock?: number;
+  }
+) {
+  try {
+    await api(`games/${gameId}/stats/${statId}`, "PUT", data);
+    revalidatePath(`/games/${gameId}`);
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "Failed to update stat" };
   }
 }
 

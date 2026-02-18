@@ -21,19 +21,14 @@ type Props = {
 };
 
 export function RosterSetup({ gameId, roster, availablePlayers }: Props) {
+  const addToRosterWithId = addToRoster.bind(null, gameId);
+  
   return (
     <div className="bg-gray-800 rounded-xl p-6">
       <h2 className="text-xl font-semibold mb-4">Game Roster</h2>
 
-      {/* Add Player Form */}
       {availablePlayers.length > 0 && (
-        <form
-          action={async (formData: FormData) => {
-            "use server";
-            await addToRoster(gameId, formData);
-          }}
-          className="flex gap-3 mb-6"
-        >
+        <form action={addToRosterWithId} className="flex gap-3 mb-6">
           <select
             name="playerId"
             required
@@ -61,37 +56,36 @@ export function RosterSetup({ gameId, roster, availablePlayers }: Props) {
         </form>
       )}
 
-
       {roster.length === 0 ? (
         <p className="text-gray-400 text-center py-8">No players added yet.</p>
       ) : (
         <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-3">
           {roster
             .sort((a, b) => a.capNumber - b.capNumber)
-            .map((r) => (
-              <div
-                key={r.id}
-                className="bg-gray-700 rounded-lg p-4 text-center relative group"
-              >
-                <div className="text-3xl font-bold text-blue-400 mb-1">
-                  {r.capNumber}
-                </div>
-                <div className="text-sm text-gray-300 truncate">
-                  {r.player.firstName}
-                </div>
-                <form
-                  action={async () => {
-                    "use server";
-                    await removeFromRoster(gameId, r.id);
-                  }}
-                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            .map((r) => {
+              const removeWithIds = removeFromRoster.bind(null, gameId, r.id);
+              return (
+                <div
+                  key={r.id}
+                  className="bg-gray-700 rounded-lg p-4 text-center relative group"
                 >
-                  <button className="w-6 h-6 bg-red-500 rounded-full text-white text-xs hover:bg-red-600">
-                    ×
-                  </button>
-                </form>
-              </div>
-            ))}
+                  <div className="text-3xl font-bold text-blue-400 mb-1">
+                    {r.capNumber}
+                  </div>
+                  <div className="text-sm text-gray-300 truncate">
+                    {r.player.firstName}
+                  </div>
+                  <form
+                    action={removeWithIds}
+                    className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <button className="w-6 h-6 bg-red-500 rounded-full text-white text-xs hover:bg-red-600">
+                      ×
+                    </button>
+                  </form>
+                </div>
+              );
+            })}
         </div>
       )}
     </div>

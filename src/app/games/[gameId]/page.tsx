@@ -3,6 +3,8 @@ import { getGameStats } from "@/lib/stats";
 import { getGameRoster, addToRoster } from "@/lib/roster";
 import { getPlayers } from "@/lib/players";
 import { getUser } from "@/lib/auth";
+import { getSubstitutions } from "@/lib/substitutions";
+import { getStartingLineup } from "@/lib/lineup";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LiveTracker } from "@/components/live-tracker";
@@ -15,12 +17,23 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
   const { gameId } = await params;
   const id = Number(gameId);
 
-  const [game, stats, roster, allPlayers] = await Promise.all([
+  const [game, stats, roster, allPlayers, substitutions] = await Promise.all([
     getGame(id),
     getGameStats(id),
     getGameRoster(id),
     getPlayers(),
+    getSubstitutions(id),
   ]);
+
+  const lineups: Record<number, number[]> = {};
+  for (let period = 1; period <= 4; period++) {
+    try {
+      const lineup = await getStartingLineup(id, period);
+      lineups[period] = lineup.map((l) => l.playerId);
+    } catch {
+      lineups[period] = [];
+    }
+  }
 
   const rosterPlayerIds = roster.map((r) => r.playerId);
   const availablePlayers = allPlayers.filter((p) => !rosterPlayerIds.includes(p.id));
@@ -42,7 +55,7 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
               {game.status}
             </span>
           </div>
-
+          
           <div className="text-4xl font-bold tracking-wider">
             <span className="text-green-400">{game.teamScore}</span>
             <span className="text-gray-500 mx-2">-</span>
@@ -82,6 +95,8 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
             gameId={id} 
             roster={roster} 
             stats={stats}
+            substitutions={substitutions}
+            lineups={lineups}
           />
         )}
 
@@ -118,7 +133,6 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
             </div>
           </div>
         )}
-
 
         {game.status === "LIVE" && roster.length === 0 && (
           <div className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-6 text-center">
