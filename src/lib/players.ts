@@ -2,15 +2,8 @@
 
 import { api } from "@/lib/api/fetch";
 import { revalidatePath } from "next/cache";
+import type { Player } from "@/types/index";
 
-type Player = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  name: string;
-  position?: string;
-  capNumber?: number;
-};
 
 export async function getPlayers(): Promise<Player[]> {
   return api("players");

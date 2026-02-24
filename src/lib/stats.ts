@@ -3,6 +3,7 @@
 import { api } from "@/lib/api/fetch";
 import { revalidatePath } from "next/cache";
 
+
 type StatEvent = {
   id: number;
   type: string;
@@ -48,6 +49,25 @@ export async function createStat(gameId: number, formData: FormData) {
     return { success: true };
   } catch (err: any) {
     return { error: err.message || "Failed to record stat" };
+  }
+}
+
+export async function createGoalWithAssist(
+  gameId: number,
+  data: {
+    scorerId: number;
+    assisterId: number | null;
+    period: number;
+    clock: number;
+    context?: string;
+  }
+) {
+  try {
+    await api(`games/${gameId}/stats/goal-with-assist`, "POST", data);
+    revalidatePath(`/games/${gameId}`);
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "Failed to record goal" };
   }
 }
 

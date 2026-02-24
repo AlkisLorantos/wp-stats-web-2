@@ -1,42 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { createStat, deleteStat, updateStat } from "@/lib/stats";
+import { createStat, deleteStat, updateStat, createGoalWithAssist } from "@/lib/stats";
 import { createSubstitution } from "@/lib/substitutions";
 import { saveStartingLineup } from "@/lib/lineup";
-
-type Player = {
-  id: number;
-  name: string;
-  capNumber?: number;
-};
-
-type RosterPlayer = {
-  id: number;
-  capNumber: number;
-  playerId: number;
-  player: Player;
-};
-
-type StatEvent = {
-  id: number;
-  type: string;
-  context?: string;
-  period?: number;
-  clock?: number;
-  playerId: number;
-  player: Player;
-};
-
-type Substitution = {
-  id: number;
-  period: number;
-  time: number;
-  playerInId: number;
-  playerOutId: number;
-  playerIn: { id: number; name: string };
-  playerOut: { id: number; name: string };
-};
+import type { RosterPlayer, StatEvent, Substitution } from "@/types";
+import { isGoalkeeper, formatClock, formatSeconds } from "@/lib/utils";
 
 type Props = {
   gameId: number;
@@ -49,7 +18,6 @@ type Props = {
 const eventTypes = [
   { key: "GOAL", label: "Goal", color: "bg-green-600 hover:bg-green-700" },
   { key: "SHOT", label: "Shot", color: "bg-blue-600 hover:bg-blue-700" },
-  { key: "ASSIST", label: "Assist", color: "bg-purple-600 hover:bg-purple-700" },
   { key: "STEAL", label: "Steal", color: "bg-yellow-600 hover:bg-yellow-700" },
   { key: "BLOCK", label: "Block", color: "bg-orange-600 hover:bg-orange-700" },
   { key: "EXCLUSION", label: "Exclusion", color: "bg-red-600 hover:bg-red-700" },
@@ -65,16 +33,38 @@ const situations = [
   { key: "PENALTY", label: "Penalty" },
 ];
 
-function formatClock(minutes: number): string {
-  const mins = Math.floor(minutes);
-  const secs = Math.round((minutes - mins) * 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
+function PlayerButton({
+  rosterPlayer,
+  isSelected,
+  onClick,
+}: {
+  rosterPlayer: RosterPlayer;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const gk = isGoalkeeper(rosterPlayer.capNumber);
 
-function formatSeconds(totalSeconds: number): string {
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
+  return (
+    <button
+      onClick={onClick}
+      className={`p-3 rounded-lg text-center transition-all ${
+        isSelected
+          ? gk
+            ? "bg-red-600 ring-2 ring-red-400 scale-105"
+            : "bg-blue-600 ring-2 ring-blue-400 scale-105"
+          : gk
+          ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
+          : "bg-gray-700 hover:bg-gray-600"
+      }`}
+    >
+      <div className={`text-2xl font-bold ${gk ? "text-red-400" : "text-white"}`}>
+        {rosterPlayer.capNumber}
+      </div>
+      <div className="text-xs text-gray-300 truncate">
+        {rosterPlayer.player.name.split(" ")[0]}
+      </div>
+    </button>
+  );
 }
 
 export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: Props) {
@@ -86,21 +76,45 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
   const [recording, setRecording] = useState(false);
   const [lastRecorded, setLastRecorded] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<StatEvent | null>(null);
-  
+
   const [activeTab, setActiveTab] = useState<"stats" | "subs">("stats");
   const [inWater, setInWater] = useState<number[]>(lineups[period] || []);
   const [playerOut, setPlayerOut] = useState<number | null>(null);
   const [playerIn, setPlayerIn] = useState<number | null>(null);
 
+  // Assist flow state
+  const [showAssistPrompt, setShowAssistPrompt] = useState(false);
+  const [pendingGoal, setPendingGoal] = useState<{
+    playerId: number;
+    period: number;
+    clock: number;
+    context?: string;
+  } | null>(null);
+
   const onBench = roster.filter((r) => !inWater.includes(r.playerId));
+  const goalkeepersInWater = roster.filter(
+    (r) => inWater.includes(r.playerId) && isGoalkeeper(r.capNumber)
+  );
 
   const handleRecordEvent = async (eventType: string) => {
     if (!selectedPlayer || recording) return;
 
+    const clockValue = minutes + seconds / 60;
+
+    if (eventType === "GOAL") {
+      setPendingGoal({
+        playerId: selectedPlayer,
+        period,
+        clock: clockValue,
+        context: situation || undefined,
+      });
+      setShowAssistPrompt(true);
+      setSelectedPlayer(null);
+      return;
+    }
+
     setRecording(true);
     setLastRecorded(null);
-
-    const clockValue = minutes + seconds / 60;
 
     const formData = new FormData();
     formData.set("playerId", selectedPlayer.toString());
@@ -118,6 +132,44 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
     }
 
     setRecording(false);
+  };
+
+  const handleGoalWithAssist = async (assistPlayerId: number | null) => {
+    if (!pendingGoal) return;
+
+    setRecording(true);
+    setShowAssistPrompt(false);
+
+    const result = await createGoalWithAssist(gameId, {
+      scorerId: pendingGoal.playerId,
+      assisterId: assistPlayerId,
+      period: pendingGoal.period,
+      clock: pendingGoal.clock,
+      context: pendingGoal.context,
+    });
+
+    if (result.success) {
+      const scorer = roster.find((r) => r.playerId === pendingGoal.playerId);
+      const assister = assistPlayerId
+        ? roster.find((r) => r.playerId === assistPlayerId)
+        : null;
+
+      if (assister) {
+        setLastRecorded(
+          `GOAL - #${scorer?.capNumber} ${scorer?.player.name} (assist: #${assister.capNumber})`
+        );
+      } else {
+        setLastRecorded(`GOAL - #${scorer?.capNumber} ${scorer?.player.name}`);
+      }
+    }
+
+    setPendingGoal(null);
+    setRecording(false);
+  };
+
+  const cancelAssistPrompt = () => {
+    setShowAssistPrompt(false);
+    setPendingGoal(null);
   };
 
   const handleUndo = async () => {
@@ -210,6 +262,60 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
 
   return (
     <div className="space-y-4">
+      {showAssistPrompt && pendingGoal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-semibold mb-2">Goal Recorded!</h2>
+            <p className="text-gray-400 mb-4">
+              #{roster.find((r) => r.playerId === pendingGoal.playerId)?.capNumber}{" "}
+              {roster.find((r) => r.playerId === pendingGoal.playerId)?.player.name}
+            </p>
+            <p className="text-lg mb-4">Was there an assist?</p>
+
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {roster
+                .filter((r) => r.playerId !== pendingGoal.playerId)
+                .sort((a, b) => a.capNumber - b.capNumber)
+                .map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => handleGoalWithAssist(r.playerId)}
+                    disabled={recording}
+                    className={`p-2 rounded-lg text-center transition-all ${
+                      isGoalkeeper(r.capNumber)
+                        ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
+                        : "bg-gray-700 hover:bg-gray-600"
+                    }`}
+                  >
+                    <div className={`text-xl font-bold ${isGoalkeeper(r.capNumber) ? "text-red-400" : "text-white"}`}>
+                      {r.capNumber}
+                    </div>
+                    <div className="text-xs text-gray-300 truncate">
+                      {r.player.name.split(" ")[0]}
+                    </div>
+                  </button>
+                ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleGoalWithAssist(null)}
+                disabled={recording}
+                className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium"
+              >
+                No Assist
+              </button>
+              <button
+                onClick={cancelAssistPrompt}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gray-800 rounded-xl p-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -256,7 +362,10 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
               {[8, 6, 4, 2, 0].map((m) => (
                 <button
                   key={m}
-                  onClick={() => { setMinutes(m); setSeconds(0); }}
+                  onClick={() => {
+                    setMinutes(m);
+                    setSeconds(0);
+                  }}
                   className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"
                 >
                   {m}:00
@@ -312,20 +421,12 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                 {roster
                   .sort((a, b) => a.capNumber - b.capNumber)
                   .map((r) => (
-                    <button
+                    <PlayerButton
                       key={r.id}
+                      rosterPlayer={r}
+                      isSelected={selectedPlayer === r.playerId}
                       onClick={() => setSelectedPlayer(r.playerId)}
-                      className={`p-3 rounded-lg text-center transition-all ${
-                        selectedPlayer === r.playerId
-                          ? "bg-blue-600 ring-2 ring-blue-400 scale-105"
-                          : "bg-gray-700 hover:bg-gray-600"
-                      }`}
-                    >
-                      <div className="text-2xl font-bold">{r.capNumber}</div>
-                      <div className="text-xs text-gray-300 truncate">
-                        {r.player.name.split(" ")[0]}
-                      </div>
-                    </button>
+                    />
                   ))}
               </div>
             </div>
@@ -364,7 +465,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                 {eventTypes.map((event) => (
                   <button
                     key={event.key}
-                    onClick={() => editingEvent ? handleUpdateEvent(event.key) : handleRecordEvent(event.key)}
+                    onClick={() =>
+                      editingEvent ? handleUpdateEvent(event.key) : handleRecordEvent(event.key)
+                    }
                     disabled={!selectedPlayer || recording}
                     className={`p-4 rounded-xl text-lg font-semibold transition-all ${event.color} ${
                       !selectedPlayer || recording
@@ -464,7 +567,12 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
           <div className="lg:col-span-1">
             <div className="bg-gray-800 rounded-xl p-4">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">In Water ({inWater.length}/7)</h2>
+                <div>
+                  <h2 className="text-lg font-semibold">In Water ({inWater.length}/7)</h2>
+                  {goalkeepersInWater.length === 0 && inWater.length > 0 && (
+                    <p className="text-yellow-400 text-xs">No goalkeeper in water</p>
+                  )}
+                </div>
                 {inWater.length === 7 && (
                   <button
                     onClick={handleSaveLineup}
@@ -479,20 +587,25 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                 {roster
                   .filter((r) => inWater.includes(r.playerId))
                   .sort((a, b) => a.capNumber - b.capNumber)
-                  .map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => setPlayerOut(r.playerId)}
-                      className={`p-3 rounded-lg text-center transition-all ${
-                        playerOut === r.playerId
-                          ? "bg-red-600 ring-2 ring-red-400"
-                          : "bg-blue-600 hover:bg-blue-700"
-                      }`}
-                    >
-                      <div className="text-2xl font-bold">{r.capNumber}</div>
-                      <div className="text-xs truncate">{r.player.name.split(" ")[0]}</div>
-                    </button>
-                  ))}
+                  .map((r) => {
+                    const gk = isGoalkeeper(r.capNumber);
+                    return (
+                      <button
+                        key={r.id}
+                        onClick={() => setPlayerOut(r.playerId)}
+                        className={`p-3 rounded-lg text-center transition-all ${
+                          playerOut === r.playerId
+                            ? "bg-orange-600 ring-2 ring-orange-400"
+                            : gk
+                            ? "bg-red-600 hover:bg-red-700"
+                            : "bg-blue-600 hover:bg-blue-700"
+                        }`}
+                      >
+                        <div className="text-2xl font-bold">{r.capNumber}</div>
+                        <div className="text-xs truncate">{r.player.name.split(" ")[0]}</div>
+                      </button>
+                    );
+                  })}
               </div>
 
               {inWater.length < 7 && (
@@ -510,28 +623,35 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
               <div className="grid grid-cols-4 gap-2">
                 {onBench
                   .sort((a, b) => a.capNumber - b.capNumber)
-                  .map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => {
-                        if (inWater.length < 7 && !playerOut) {
-                          setInWater((prev) => [...prev, r.playerId]);
-                        } else {
-                          setPlayerIn(r.playerId);
-                        }
-                      }}
-                      className={`p-3 rounded-lg text-center transition-all ${
-                        playerIn === r.playerId
-                          ? "bg-green-600 ring-2 ring-green-400"
-                          : "bg-gray-700 hover:bg-gray-600"
-                      }`}
-                    >
-                      <div className="text-2xl font-bold">{r.capNumber}</div>
-                      <div className="text-xs text-gray-300 truncate">
-                        {r.player.name.split(" ")[0]}
-                      </div>
-                    </button>
-                  ))}
+                  .map((r) => {
+                    const gk = isGoalkeeper(r.capNumber);
+                    return (
+                      <button
+                        key={r.id}
+                        onClick={() => {
+                          if (inWater.length < 7 && !playerOut) {
+                            setInWater((prev) => [...prev, r.playerId]);
+                          } else {
+                            setPlayerIn(r.playerId);
+                          }
+                        }}
+                        className={`p-3 rounded-lg text-center transition-all ${
+                          playerIn === r.playerId
+                            ? "bg-green-600 ring-2 ring-green-400"
+                            : gk
+                            ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
+                            : "bg-gray-700 hover:bg-gray-600"
+                        }`}
+                      >
+                        <div className={`text-2xl font-bold ${gk ? "text-red-400" : "text-white"}`}>
+                          {r.capNumber}
+                        </div>
+                        <div className="text-xs text-gray-300 truncate">
+                          {r.player.name.split(" ")[0]}
+                        </div>
+                      </button>
+                    );
+                  })}
               </div>
             </div>
           </div>
@@ -563,7 +683,10 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                     Confirm
                   </button>
                   <button
-                    onClick={() => { setPlayerIn(null); setPlayerOut(null); }}
+                    onClick={() => {
+                      setPlayerIn(null);
+                      setPlayerOut(null);
+                    }}
                     className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium"
                   >
                     Cancel

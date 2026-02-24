@@ -1,10 +1,11 @@
 import { getGame, startGame, endGame } from "@/lib/games";
 import { getGameStats } from "@/lib/stats";
-import { getGameRoster, addToRoster } from "@/lib/roster";
+import { getGameRoster } from "@/lib/roster";
 import { getPlayers } from "@/lib/players";
 import { getUser } from "@/lib/auth";
 import { getSubstitutions } from "@/lib/substitutions";
 import { getStartingLineup } from "@/lib/lineup";
+import { getPresets } from "@/lib/rosterPreset";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LiveTracker } from "@/components/live-tracker";
@@ -17,12 +18,13 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
   const { gameId } = await params;
   const id = Number(gameId);
 
-  const [game, stats, roster, allPlayers, substitutions] = await Promise.all([
+  const [game, stats, roster, allPlayers, substitutions, presets] = await Promise.all([
     getGame(id),
     getGameStats(id),
     getGameRoster(id),
     getPlayers(),
     getSubstitutions(id),
+    getPresets(),
   ]);
 
   const lineups: Record<number, number[]> = {};
@@ -86,7 +88,8 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
           <RosterSetup 
             gameId={id} 
             roster={roster} 
-            availablePlayers={availablePlayers} 
+            availablePlayers={availablePlayers}
+            presets={presets}
           />
         )}
 
