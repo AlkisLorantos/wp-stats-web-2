@@ -21,20 +21,55 @@ type Props = {
   lineups: Record<number, number[]>;
 };
 
-const eventTypes = [
-  { key: "GOAL", label: "Goal", color: "bg-green-600 hover:bg-green-700" },
-  { key: "SHOT", label: "Shot", color: "bg-blue-600 hover:bg-blue-700" },
-  { key: "STEAL", label: "Steal", color: "bg-yellow-600 hover:bg-yellow-700" },
-  { key: "BLOCK", label: "Block", color: "bg-orange-600 hover:bg-orange-700" },
+const allEventTypes = [
+  {
+    key: "GOAL",
+    label: "Goal",
+    color: "bg-green-600 hover:bg-green-700",
+    gkOnly: false,
+    fieldOnly: false,
+  },
+  {
+    key: "SHOT",
+    label: "Shot",
+    color: "bg-blue-600 hover:bg-blue-700",
+    gkOnly: false,
+    fieldOnly: false,
+  },
+  {
+    key: "SAVE",
+    label: "Save",
+    color: "bg-cyan-600 hover:bg-cyan-700",
+    gkOnly: true,
+    fieldOnly: false,
+  },
+  {
+    key: "STEAL",
+    label: "Steal",
+    color: "bg-yellow-600 hover:bg-yellow-700",
+    gkOnly: false,
+    fieldOnly: false,
+  },
+  {
+    key: "BLOCK",
+    label: "Block",
+    color: "bg-orange-600 hover:bg-orange-700",
+    gkOnly: false,
+    fieldOnly: true,
+  },
   {
     key: "EXCLUSION",
     label: "Exclusion",
-    color: "bg-red-600 hover:bg-red-700",
+    color: "bg-red-600 hover:bg-red-600",
+    gkOnly: false,
+    fieldOnly: false,
   },
   {
     key: "TURNOVER",
     label: "Turnover",
     color: "bg-gray-600 hover:bg-gray-700",
+    gkOnly: false,
+    fieldOnly: false,
   },
 ];
 
@@ -119,6 +154,19 @@ export function LiveTracker({
   const goalkeepersInWater = roster.filter(
     (r) => inWater.includes(r.playerId) && isGoalkeeper(r.capNumber),
   );
+
+  const selectedRosterPlayer = roster.find(
+    (r) => r.playerId === selectedPlayer,
+  );
+  const isSelectedGK = selectedRosterPlayer
+    ? isGoalkeeper(selectedRosterPlayer.capNumber)
+    : false;
+
+  const eventTypes = allEventTypes.filter((e) => {
+    if (e.gkOnly && !isSelectedGK) return false;
+    if (e.fieldOnly && isSelectedGK) return false;
+    return true;
+  });
 
   const handleRecordEvent = async (eventType: string) => {
     if (!selectedPlayer || recording) return;
