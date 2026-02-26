@@ -34,10 +34,14 @@ export type StatEvent = {
   clock?: number;
   x?: number;
   y?: number;
+  goalX?: number;
+  goalY?: number;
   playerId: number;
   gameId: number;
+  assistEventId?: number;
   player: Player;
 };
+
 
 export type Substitution = {
   id: number;
@@ -68,4 +72,15 @@ export type LineupPlayer = {
 
 export type AuthResult = {
   error?: string;
+};
+
+export type ShotOutcome = "GOAL" | "SAVED" | "MISSED" | "BLOCKED" | "POST";
+
+export type ShotLocationData = {
+  poolX: number;
+  poolY: number;
+  goalX: number;
+  goalY: number;
+  outcome: ShotOutcome;
+  assisterId?: number;
 };

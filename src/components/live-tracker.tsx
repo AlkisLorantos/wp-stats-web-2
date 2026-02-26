@@ -1,11 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { createStat, deleteStat, updateStat, createGoalWithAssist } from "@/lib/stats";
+import {
+  createStat,
+  deleteStat,
+  updateStat,
+  createShotWithLocation,
+} from "@/lib/stats";
 import { createSubstitution } from "@/lib/substitutions";
 import { saveStartingLineup } from "@/lib/lineup";
 import type { RosterPlayer, StatEvent, Substitution } from "@/types";
 import { isGoalkeeper, formatClock, formatSeconds } from "@/lib/utils";
+import { ShotLocationModal } from "./shot-location-modal";
 
 type Props = {
   gameId: number;
@@ -20,8 +26,16 @@ const eventTypes = [
   { key: "SHOT", label: "Shot", color: "bg-blue-600 hover:bg-blue-700" },
   { key: "STEAL", label: "Steal", color: "bg-yellow-600 hover:bg-yellow-700" },
   { key: "BLOCK", label: "Block", color: "bg-orange-600 hover:bg-orange-700" },
-  { key: "EXCLUSION", label: "Exclusion", color: "bg-red-600 hover:bg-red-700" },
-  { key: "TURNOVER", label: "Turnover", color: "bg-gray-600 hover:bg-gray-700" },
+  {
+    key: "EXCLUSION",
+    label: "Exclusion",
+    color: "bg-red-600 hover:bg-red-700",
+  },
+  {
+    key: "TURNOVER",
+    label: "Turnover",
+    color: "bg-gray-600 hover:bg-gray-700",
+  },
 ];
 
 const situations = [
@@ -53,11 +67,13 @@ function PlayerButton({
             ? "bg-red-600 ring-2 ring-red-400 scale-105"
             : "bg-blue-600 ring-2 ring-blue-400 scale-105"
           : gk
-          ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
-          : "bg-gray-700 hover:bg-gray-600"
+            ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
+            : "bg-gray-700 hover:bg-gray-600"
       }`}
     >
-      <div className={`text-2xl font-bold ${gk ? "text-red-400" : "text-white"}`}>
+      <div
+        className={`text-2xl font-bold ${gk ? "text-red-400" : "text-white"}`}
+      >
         {rosterPlayer.capNumber}
       </div>
       <div className="text-xs text-gray-300 truncate">
@@ -67,7 +83,13 @@ function PlayerButton({
   );
 }
 
-export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: Props) {
+export function LiveTracker({
+  gameId,
+  roster,
+  stats,
+  substitutions,
+  lineups,
+}: Props) {
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [situation, setSituation] = useState("");
   const [period, setPeriod] = useState(1);
@@ -82,18 +104,20 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
   const [playerOut, setPlayerOut] = useState<number | null>(null);
   const [playerIn, setPlayerIn] = useState<number | null>(null);
 
-  // Assist flow state
-  const [showAssistPrompt, setShowAssistPrompt] = useState(false);
-  const [pendingGoal, setPendingGoal] = useState<{
-    playerId: number;
-    period: number;
-    clock: number;
-    context?: string;
-  } | null>(null);
+  const [showShotModal, setShowShotModal] = useState(false);
+  const [shotPlayer, setShotPlayer] = useState<RosterPlayer | null>(null);
+
+  // const [showAssistPrompt, setShowAssistPrompt] = useState(false);
+  // const [pendingGoal, setPendingGoal] = useState<{
+  //   playerId: number;
+  //   period: number;
+  //   clock: number;
+  //   context?: string;
+  // } | null>(null);
 
   const onBench = roster.filter((r) => !inWater.includes(r.playerId));
   const goalkeepersInWater = roster.filter(
-    (r) => inWater.includes(r.playerId) && isGoalkeeper(r.capNumber)
+    (r) => inWater.includes(r.playerId) && isGoalkeeper(r.capNumber),
   );
 
   const handleRecordEvent = async (eventType: string) => {
@@ -101,15 +125,13 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
 
     const clockValue = minutes + seconds / 60;
 
-    if (eventType === "GOAL") {
-      setPendingGoal({
-        playerId: selectedPlayer,
-        period,
-        clock: clockValue,
-        context: situation || undefined,
-      });
-      setShowAssistPrompt(true);
-      setSelectedPlayer(null);
+    if (eventType === "SHOT" || eventType === "GOAL") {
+      const player = roster.find((r) => r.playerId === selectedPlayer);
+      if (player) {
+        setShotPlayer(player);
+        setShowShotModal(true);
+        setSelectedPlayer(null);
+      }
       return;
     }
 
@@ -127,50 +149,92 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
 
     if (result.success) {
       const player = roster.find((r) => r.playerId === selectedPlayer);
-      setLastRecorded(`${eventType} - #${player?.capNumber} ${player?.player.name}`);
+      setLastRecorded(
+        `${eventType} - #${player?.capNumber} ${player?.player.name}`,
+      );
       setSelectedPlayer(null);
     }
 
     setRecording(false);
   };
 
-  const handleGoalWithAssist = async (assistPlayerId: number | null) => {
-    if (!pendingGoal) return;
+  const handleShotSubmit = async (data: {
+    poolX: number;
+    poolY: number;
+    goalX: number;
+    goalY: number;
+    outcome: string;
+    assisterId?: number;
+  }) => {
+    if (!shotPlayer) return;
 
     setRecording(true);
-    setShowAssistPrompt(false);
+    setShowShotModal(false);
 
-    const result = await createGoalWithAssist(gameId, {
-      scorerId: pendingGoal.playerId,
-      assisterId: assistPlayerId,
-      period: pendingGoal.period,
-      clock: pendingGoal.clock,
-      context: pendingGoal.context,
+    const clockValue = minutes + seconds / 60;
+
+    const result = await createShotWithLocation(gameId, {
+      playerId: shotPlayer.playerId,
+      x: data.poolX,
+      y: data.poolY,
+      goalX: data.goalX,
+      goalY: data.goalY,
+      shotOutcome: data.outcome,
+      assisterId: data.assisterId,
+      period,
+      clock: clockValue,
+      context: situation || undefined,
     });
 
     if (result.success) {
-      const scorer = roster.find((r) => r.playerId === pendingGoal.playerId);
-      const assister = assistPlayerId
-        ? roster.find((r) => r.playerId === assistPlayerId)
-        : null;
-
-      if (assister) {
-        setLastRecorded(
-          `GOAL - #${scorer?.capNumber} ${scorer?.player.name} (assist: #${assister.capNumber})`
-        );
-      } else {
-        setLastRecorded(`GOAL - #${scorer?.capNumber} ${scorer?.player.name}`);
-      }
+      const outcomeText =
+        data.outcome === "GOAL" ? "GOAL" : `SHOT (${data.outcome})`;
+      setLastRecorded(
+        `${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`,
+      );
     }
 
-    setPendingGoal(null);
+    setShotPlayer(null);
     setRecording(false);
   };
 
-  const cancelAssistPrompt = () => {
-    setShowAssistPrompt(false);
-    setPendingGoal(null);
-  };
+  // const handleGoalWithAssist = async (assistPlayerId: number | null) => {
+  //   if (!pendingGoal) return;
+
+  //   setRecording(true);
+  //   setShowAssistPrompt(false);
+
+  //   const result = await createGoalWithAssist(gameId, {
+  //     scorerId: pendingGoal.playerId,
+  //     assisterId: assistPlayerId,
+  //     period: pendingGoal.period,
+  //     clock: pendingGoal.clock,
+  //     context: pendingGoal.context,
+  //   });
+
+  //   if (result.success) {
+  //     const scorer = roster.find((r) => r.playerId === pendingGoal.playerId);
+  //     const assister = assistPlayerId
+  //       ? roster.find((r) => r.playerId === assistPlayerId)
+  //       : null;
+
+  //     if (assister) {
+  //       setLastRecorded(
+  //         `GOAL - #${scorer?.capNumber} ${scorer?.player.name} (assist: #${assister.capNumber})`,
+  //       );
+  //     } else {
+  //       setLastRecorded(`GOAL - #${scorer?.capNumber} ${scorer?.player.name}`);
+  //     }
+  //   }
+
+  //   setPendingGoal(null);
+  //   setRecording(false);
+  // };
+
+  // const cancelAssistPrompt = () => {
+  //   setShowAssistPrompt(false);
+  //   setPendingGoal(null);
+  // };
 
   const handleUndo = async () => {
     if (stats.length === 0) return;
@@ -247,7 +311,10 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
     });
 
     if (result.success) {
-      setInWater((prev) => [...prev.filter((id) => id !== playerOut), playerIn]);
+      setInWater((prev) => [
+        ...prev.filter((id) => id !== playerOut),
+        playerIn,
+      ]);
       setPlayerIn(null);
       setPlayerOut(null);
     }
@@ -262,13 +329,30 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
 
   return (
     <div className="space-y-4">
-      {showAssistPrompt && pendingGoal && (
+      <ShotLocationModal
+        isOpen={showShotModal}
+        onClose={() => {
+          setShowShotModal(false);
+          setShotPlayer(null);
+        }}
+        onSubmit={handleShotSubmit}
+        scorer={shotPlayer!}
+        roster={roster}
+      />
+      {/* {showAssistPrompt && pendingGoal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
             <h2 className="text-xl font-semibold mb-2">Goal Recorded!</h2>
             <p className="text-gray-400 mb-4">
-              #{roster.find((r) => r.playerId === pendingGoal.playerId)?.capNumber}{" "}
-              {roster.find((r) => r.playerId === pendingGoal.playerId)?.player.name}
+              #
+              {
+                roster.find((r) => r.playerId === pendingGoal.playerId)
+                  ?.capNumber
+              }{" "}
+              {
+                roster.find((r) => r.playerId === pendingGoal.playerId)?.player
+                  .name
+              }
             </p>
             <p className="text-lg mb-4">Was there an assist?</p>
 
@@ -287,7 +371,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                         : "bg-gray-700 hover:bg-gray-600"
                     }`}
                   >
-                    <div className={`text-xl font-bold ${isGoalkeeper(r.capNumber) ? "text-red-400" : "text-white"}`}>
+                    <div
+                      className={`text-xl font-bold ${isGoalkeeper(r.capNumber) ? "text-red-400" : "text-white"}`}
+                    >
                       {r.capNumber}
                     </div>
                     <div className="text-xs text-gray-300 truncate">
@@ -314,7 +400,7 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       <div className="bg-gray-800 rounded-xl p-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -345,7 +431,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                 min={0}
                 max={8}
                 value={minutes}
-                onChange={(e) => setMinutes(Math.max(0, Math.min(8, Number(e.target.value))))}
+                onChange={(e) =>
+                  setMinutes(Math.max(0, Math.min(8, Number(e.target.value))))
+                }
                 className="w-16 h-12 bg-gray-700 border border-gray-600 rounded-lg text-center text-2xl font-mono font-bold"
               />
               <span className="text-2xl font-bold text-gray-400">:</span>
@@ -354,7 +442,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                 min={0}
                 max={59}
                 value={seconds.toString().padStart(2, "0")}
-                onChange={(e) => setSeconds(Math.max(0, Math.min(59, Number(e.target.value))))}
+                onChange={(e) =>
+                  setSeconds(Math.max(0, Math.min(59, Number(e.target.value))))
+                }
                 className="w-16 h-12 bg-gray-700 border border-gray-600 rounded-lg text-center text-2xl font-mono font-bold"
               />
             </div>
@@ -378,7 +468,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
             <button
               onClick={() => setActiveTab("stats")}
               className={`px-4 py-2 rounded-lg font-medium ${
-                activeTab === "stats" ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"
+                activeTab === "stats"
+                  ? "bg-blue-600"
+                  : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
               Stats
@@ -386,7 +478,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
             <button
               onClick={() => setActiveTab("subs")}
               className={`px-4 py-2 rounded-lg font-medium ${
-                activeTab === "subs" ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"
+                activeTab === "subs"
+                  ? "bg-blue-600"
+                  : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
               Subs
@@ -457,8 +551,8 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                 {editingEvent
                   ? `Update event for #${roster.find((r) => r.playerId === selectedPlayer)?.capNumber || "?"}`
                   : selectedPlayer
-                  ? `Record for #${roster.find((r) => r.playerId === selectedPlayer)?.capNumber}`
-                  : "Select a player first"}
+                    ? `Record for #${roster.find((r) => r.playerId === selectedPlayer)?.capNumber}`
+                    : "Select a player first"}
               </h2>
 
               <div className="grid grid-cols-2 gap-3">
@@ -466,7 +560,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                   <button
                     key={event.key}
                     onClick={() =>
-                      editingEvent ? handleUpdateEvent(event.key) : handleRecordEvent(event.key)
+                      editingEvent
+                        ? handleUpdateEvent(event.key)
+                        : handleRecordEvent(event.key)
                     }
                     disabled={!selectedPlayer || recording}
                     className={`p-4 rounded-xl text-lg font-semibold transition-all ${event.color} ${
@@ -504,7 +600,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
 
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {stats.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No events yet</p>
+                  <p className="text-gray-500 text-center py-8">
+                    No events yet
+                  </p>
                 ) : (
                   [...stats].reverse().map((stat) => (
                     <div
@@ -521,10 +619,10 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                             stat.type === "GOAL"
                               ? "bg-green-500/20 text-green-400"
                               : stat.type === "EXCLUSION"
-                              ? "bg-red-500/20 text-red-400"
-                              : stat.type === "ASSIST"
-                              ? "bg-purple-500/20 text-purple-400"
-                              : "bg-gray-600 text-gray-300"
+                                ? "bg-red-500/20 text-red-400"
+                                : stat.type === "ASSIST"
+                                  ? "bg-purple-500/20 text-purple-400"
+                                  : "bg-gray-600 text-gray-300"
                           }`}
                         >
                           {stat.type}
@@ -568,9 +666,13 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
             <div className="bg-gray-800 rounded-xl p-4">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold">In Water ({inWater.length}/7)</h2>
+                  <h2 className="text-lg font-semibold">
+                    In Water ({inWater.length}/7)
+                  </h2>
                   {goalkeepersInWater.length === 0 && inWater.length > 0 && (
-                    <p className="text-yellow-400 text-xs">No goalkeeper in water</p>
+                    <p className="text-yellow-400 text-xs">
+                      No goalkeeper in water
+                    </p>
                   )}
                 </div>
                 {inWater.length === 7 && (
@@ -597,12 +699,14 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                           playerOut === r.playerId
                             ? "bg-orange-600 ring-2 ring-orange-400"
                             : gk
-                            ? "bg-red-600 hover:bg-red-700"
-                            : "bg-blue-600 hover:bg-blue-700"
+                              ? "bg-red-600 hover:bg-red-700"
+                              : "bg-blue-600 hover:bg-blue-700"
                         }`}
                       >
                         <div className="text-2xl font-bold">{r.capNumber}</div>
-                        <div className="text-xs truncate">{r.player.name.split(" ")[0]}</div>
+                        <div className="text-xs truncate">
+                          {r.player.name.split(" ")[0]}
+                        </div>
                       </button>
                     );
                   })}
@@ -610,7 +714,8 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
 
               {inWater.length < 7 && (
                 <p className="text-yellow-400 text-sm mt-4">
-                  Select {7 - inWater.length} more player(s) from bench to complete lineup
+                  Select {7 - inWater.length} more player(s) from bench to
+                  complete lineup
                 </p>
               )}
             </div>
@@ -639,11 +744,13 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
                           playerIn === r.playerId
                             ? "bg-green-600 ring-2 ring-green-400"
                             : gk
-                            ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
-                            : "bg-gray-700 hover:bg-gray-600"
+                              ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
+                              : "bg-gray-700 hover:bg-gray-600"
                         }`}
                       >
-                        <div className={`text-2xl font-bold ${gk ? "text-red-400" : "text-white"}`}>
+                        <div
+                          className={`text-2xl font-bold ${gk ? "text-red-400" : "text-white"}`}
+                        >
                           {r.capNumber}
                         </div>
                         <div className="text-xs text-gray-300 truncate">
@@ -659,7 +766,9 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
           <div className="lg:col-span-1 space-y-4">
             {playerOut && playerIn && (
               <div className="bg-gray-800 rounded-xl p-4">
-                <h2 className="text-lg font-semibold mb-4">Confirm Substitution</h2>
+                <h2 className="text-lg font-semibold mb-4">
+                  Confirm Substitution
+                </h2>
                 <div className="flex items-center justify-center gap-4 mb-4">
                   <div className="text-center">
                     <div className="text-red-400 text-sm">OUT</div>
@@ -699,13 +808,20 @@ export function LiveTracker({ gameId, roster, stats, substitutions, lineups }: P
               <h2 className="text-lg font-semibold mb-4">Substitution Log</h2>
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {substitutions.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No substitutions yet</p>
+                  <p className="text-gray-500 text-center py-4">
+                    No substitutions yet
+                  </p>
                 ) : (
                   [...substitutions].reverse().map((sub) => (
-                    <div key={sub.id} className="py-2 px-3 bg-gray-700/50 rounded-lg text-sm">
+                    <div
+                      key={sub.id}
+                      className="py-2 px-3 bg-gray-700/50 rounded-lg text-sm"
+                    >
                       <span className="text-red-400">{sub.playerOut.name}</span>
                       <span className="text-gray-400 mx-2">→</span>
-                      <span className="text-green-400">{sub.playerIn.name}</span>
+                      <span className="text-green-400">
+                        {sub.playerIn.name}
+                      </span>
                       <span className="text-gray-500 ml-2">
                         Q{sub.period} {formatSeconds(sub.time)}
                       </span>

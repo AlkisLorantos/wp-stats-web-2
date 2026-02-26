@@ -52,24 +52,48 @@ export async function createStat(gameId: number, formData: FormData) {
   }
 }
 
-export async function createGoalWithAssist(
+export async function createShotWithLocation(
   gameId: number,
   data: {
-    scorerId: number;
-    assisterId: number | null;
+    playerId: number;
+    x: number;
+    y: number;
+    goalX: number;
+    goalY: number;
+    shotOutcome: string;
+    assisterId?: number;
     period: number;
     clock: number;
     context?: string;
   }
 ) {
   try {
-    await api(`games/${gameId}/stats/goal-with-assist`, "POST", data);
+    await api(`games/${gameId}/stats/shot`, "POST", data);
     revalidatePath(`/games/${gameId}`);
     return { success: true };
   } catch (err: any) {
-    return { error: err.message || "Failed to record goal" };
+    return { error: err.message || "Failed to record shot" };
   }
 }
+
+// export async function createGoalWithAssist(
+//   gameId: number,
+//   data: {
+//     scorerId: number;
+//     assisterId: number | null;
+//     period: number;
+//     clock: number;
+//     context?: string;
+//   }
+// ) {
+//   try {
+//     await api(`games/${gameId}/stats/goal-with-assist`, "POST", data);
+//     revalidatePath(`/games/${gameId}`);
+//     return { success: true };
+//   } catch (err: any) {
+//     return { error: err.message || "Failed to record goal" };
+//   }
+// }
 
 export async function updateStat(
   gameId: number,
