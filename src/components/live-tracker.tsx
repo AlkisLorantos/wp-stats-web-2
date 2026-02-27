@@ -9,9 +9,16 @@ import {
 } from "@/lib/stats";
 import { createSubstitution } from "@/lib/substitutions";
 import { saveStartingLineup } from "@/lib/lineup";
-import type { RosterPlayer, StatEvent, Substitution } from "@/types";
+import type {
+  RosterPlayer,
+  StatEvent,
+  Substitution,
+  Position,
+  Formation,
+} from "@/types";
 import { isGoalkeeper, formatClock, formatSeconds } from "@/lib/utils";
 import { ShotLocationModal } from "./shot-location-modal";
+import { FormationView } from "./formation-view";
 
 type Props = {
   gameId: number;
@@ -141,6 +148,22 @@ export function LiveTracker({
 
   const [showShotModal, setShowShotModal] = useState(false);
   const [shotPlayer, setShotPlayer] = useState<RosterPlayer | null>(null);
+
+  const [formation, setFormation] = useState<Formation>({
+    GK: null,
+    LW: null,
+    RW: null,
+    LD: null,
+    RD: null,
+    CB: null,
+    C: null,
+  });
+  const [selectedPosition, setSelectedPosition] = useState<Position | null>(
+    null,
+  );
+  const [assigningPosition, setAssigningPosition] = useState<Position | null>(
+    null,
+  );
 
   // const [showAssistPrompt, setShowAssistPrompt] = useState(false);
   // const [pendingGoal, setPendingGoal] = useState<{
@@ -375,6 +398,35 @@ export function LiveTracker({
     setSeconds(0);
   };
 
+  const handlePositionClick = (position: Position) => {
+    const playerId = formation[position];
+
+    if (playerId) {
+      setSelectedPlayer(playerId);
+      setSelectedPosition(position);
+      setAssigningPosition(null);
+    } else {
+      setAssigningPosition(position);
+      setSelectedPosition(position);
+    }
+  };
+
+  const handleAssignPlayer = (playerId: number) => {
+    if (!assigningPosition) return;
+
+    const newFormation = { ...formation };
+    for (const pos of Object.keys(newFormation) as Position[]) {
+      if (newFormation[pos] === playerId) {
+        newFormation[pos] = null;
+      }
+    }
+
+    newFormation[assigningPosition] = playerId;
+    setFormation(newFormation);
+    setAssigningPosition(null);
+    setSelectedPosition(null);
+  };
+
   return (
     <div className="space-y-4">
       <ShotLocationModal
@@ -557,21 +609,60 @@ export function LiveTracker({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-4">
             <div className="bg-gray-800 rounded-xl p-4">
-              <h2 className="text-lg font-semibold mb-4">Select Player</h2>
+  <h2 className="text-lg font-semibold mb-4">
+    {assigningPosition 
+      ? `Select player for ${assigningPosition}` 
+      : "Select Player"}
+  </h2>
 
-              <div className="grid grid-cols-4 gap-2">
-                {roster
-                  .sort((a, b) => a.capNumber - b.capNumber)
-                  .map((r) => (
-                    <PlayerButton
-                      key={r.id}
-                      rosterPlayer={r}
-                      isSelected={selectedPlayer === r.playerId}
-                      onClick={() => setSelectedPlayer(r.playerId)}
-                    />
-                  ))}
+  <FormationView
+    formation={formation}
+    roster={roster}
+    onPositionClick={handlePositionClick}
+    selectedPosition={selectedPosition}
+  />
+
+  {/* Bench - show when assigning or when formation not complete */}
+  {assigningPosition && (
+    <div className="mt-4 pt-4 border-t border-gray-700">
+      <h3 className="text-sm text-gray-400 mb-2">Available Players</h3>
+      <div className="grid grid-cols-4 gap-2">
+        {roster
+          .filter((r) => !Object.values(formation).includes(r.playerId))
+          .sort((a, b) => a.capNumber - b.capNumber)
+          .map((r) => (
+            <button
+              key={r.id}
+              onClick={() => handleAssignPlayer(r.playerId)}
+              className={`p-2 rounded-lg text-center transition-all ${
+                r.capNumber === 1 || r.capNumber === 13
+                  ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
+                  : "bg-gray-700 hover:bg-gray-600"
+              }`}
+            >
+              <div className={`text-lg font-bold ${
+                r.capNumber === 1 || r.capNumber === 13 ? "text-red-400" : "text-white"
+              }`}>
+                {r.capNumber}
               </div>
-            </div>
+              <div className="text-xs text-gray-300 truncate">
+                {r.player.name.split(" ")[0]}
+              </div>
+            </button>
+          ))}
+      </div>
+      <button
+        onClick={() => {
+          setAssigningPosition(null);
+          setSelectedPosition(null);
+        }}
+        className="mt-2 w-full py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm"
+      >
+        Cancel
+      </button>
+    </div>
+  )}
+</div>
 
             <div className="bg-gray-800 rounded-xl p-4">
               <h2 className="text-lg font-semibold mb-3">Situation</h2>

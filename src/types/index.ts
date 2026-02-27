@@ -84,3 +84,9 @@ export type ShotLocationData = {
   outcome: ShotOutcome;
   assisterId?: number;
 };
+
+export type Position = "GK" | "LW" | "RW" | "LD" | "RD" | "CB" | "C";
+
+export type Formation = {
+  [key in Position]: number | null;
+}
