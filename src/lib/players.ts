@@ -2,7 +2,7 @@
 
 import { api } from "@/lib/api/fetch";
 import { revalidatePath } from "next/cache";
-import type { Player } from "@/types/index";
+import type { Player, PlayerStats } from "@/types/index";
 
 
 export async function getPlayers(): Promise<Player[]> {
@@ -40,3 +40,7 @@ export async function deletePlayer(id: number) {
     return { error: err.message || "Failed to delete player" };
   }
 }
+
+export async function getPlayerStats(id: number): Promise<PlayerStats> {
+  return api(`players/${id}/stats`);
+} 

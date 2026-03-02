@@ -15,13 +15,16 @@ import type {
   Substitution,
   Position,
   Formation,
+  Game,
 } from "@/types";
 import { isGoalkeeper, formatClock, formatSeconds } from "@/lib/utils";
 import { ShotLocationModal } from "./shot-location-modal";
 import { FormationView } from "./formation-view";
+import { BoxScore } from "./box-score";
 
 type Props = {
   gameId: number;
+  game: Game;
   roster: RosterPlayer[];
   stats: StatEvent[];
   substitutions: Substitution[];
@@ -44,13 +47,6 @@ const allEventTypes = [
     fieldOnly: false,
   },
   {
-    key: "SAVE",
-    label: "Save",
-    color: "bg-cyan-600 hover:bg-cyan-700",
-    gkOnly: true,
-    fieldOnly: false,
-  },
-  {
     key: "STEAL",
     label: "Steal",
     color: "bg-yellow-600 hover:bg-yellow-700",
@@ -65,9 +61,16 @@ const allEventTypes = [
     fieldOnly: true,
   },
   {
+    key: "SAVE",
+    label: "Save",
+    color: "bg-cyan-600 hover:bg-cyan-700",
+    gkOnly: true,
+    fieldOnly: false,
+  },
+  {
     key: "EXCLUSION",
     label: "Exclusion",
-    color: "bg-red-600 hover:bg-red-600",
+    color: "bg-red-600 hover:bg-red-700",
     gkOnly: false,
     fieldOnly: false,
   },
@@ -127,6 +130,7 @@ function PlayerButton({
 
 export function LiveTracker({
   gameId,
+  game,
   roster,
   stats,
   substitutions,
@@ -141,7 +145,9 @@ export function LiveTracker({
   const [lastRecorded, setLastRecorded] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<StatEvent | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"stats" | "subs">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "subs" | "boxscore">(
+    "stats",
+  );
   const [inWater, setInWater] = useState<number[]>(lineups[period] || []);
   const [playerOut, setPlayerOut] = useState<number | null>(null);
   const [playerIn, setPlayerIn] = useState<number | null>(null);
@@ -165,14 +171,6 @@ export function LiveTracker({
     null,
   );
 
-  // const [showAssistPrompt, setShowAssistPrompt] = useState(false);
-  // const [pendingGoal, setPendingGoal] = useState<{
-  //   playerId: number;
-  //   period: number;
-  //   clock: number;
-  //   context?: string;
-  // } | null>(null);
-
   const playersInFormation = Object.values(formation).filter(
     Boolean,
   ) as number[];
@@ -186,9 +184,7 @@ export function LiveTracker({
   const selectedRosterPlayer = roster.find(
     (r) => r.playerId === selectedPlayer,
   );
-  const isSelectedGK = selectedRosterPlayer
-    ? isGoalkeeper(selectedRosterPlayer.capNumber)
-    : false;
+  const isSelectedGK = selectedPlayer ? formation.GK === selectedPlayer : false;
 
   const eventTypes = allEventTypes.filter((e) => {
     if (e.gkOnly && !isSelectedGK) return false;
@@ -445,69 +441,6 @@ export function LiveTracker({
         scorer={shotPlayer!}
         roster={roster}
       />
-      {/* {showAssistPrompt && pendingGoal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-semibold mb-2">Goal Recorded!</h2>
-            <p className="text-gray-400 mb-4">
-              #
-              {
-                roster.find((r) => r.playerId === pendingGoal.playerId)
-                  ?.capNumber
-              }{" "}
-              {
-                roster.find((r) => r.playerId === pendingGoal.playerId)?.player
-                  .name
-              }
-            </p>
-            <p className="text-lg mb-4">Was there an assist?</p>
-
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {roster
-                .filter((r) => r.playerId !== pendingGoal.playerId)
-                .sort((a, b) => a.capNumber - b.capNumber)
-                .map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => handleGoalWithAssist(r.playerId)}
-                    disabled={recording}
-                    className={`p-2 rounded-lg text-center transition-all ${
-                      isGoalkeeper(r.capNumber)
-                        ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
-                        : "bg-gray-700 hover:bg-gray-600"
-                    }`}
-                  >
-                    <div
-                      className={`text-xl font-bold ${isGoalkeeper(r.capNumber) ? "text-red-400" : "text-white"}`}
-                    >
-                      {r.capNumber}
-                    </div>
-                    <div className="text-xs text-gray-300 truncate">
-                      {r.player.name.split(" ")[0]}
-                    </div>
-                  </button>
-                ))}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleGoalWithAssist(null)}
-                disabled={recording}
-                className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium"
-              >
-                No Assist
-              </button>
-              <button
-                onClick={cancelAssistPrompt}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )} */}
-
       <div className="bg-gray-800 rounded-xl p-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -590,6 +523,16 @@ export function LiveTracker({
               }`}
             >
               Subs
+            </button>
+            <button
+              onClick={() => setActiveTab("boxscore")}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                activeTab === "boxscore"
+                  ? "bg-blue-600"
+                  : "bg-gray-700 hover:bg-gray-600"
+              }`}
+            >
+              Box Score
             </button>
           </div>
         </div>
@@ -963,6 +906,16 @@ export function LiveTracker({
             </div>
           </div>
         </div>
+      )}
+      {activeTab === "boxscore" && (
+        <BoxScore
+          roster={roster}
+          stats={stats}
+          teamScore={game.teamScore}
+          opponentScore={game.opponentScore}
+          opponent={game.opponent}
+          status={game.status}
+        />
       )}
     </div>
   );

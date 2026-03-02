@@ -96,6 +96,7 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
         {game.status === "LIVE" && roster.length > 0 && (
           <LiveTracker 
             gameId={id} 
+            game={game}
             roster={roster} 
             stats={stats}
             substitutions={substitutions}

@@ -42,6 +42,16 @@ export type StatEvent = {
   player: Player;
 };
 
+export type PlayerStats = {
+  goals: number;
+  assists: number;
+  shots: number;
+  steals: number;
+  blocks: number;
+  saves: number;
+  exclusions: number;
+  turnovers: number;
+};
 
 export type Substitution = {
   id: number;
