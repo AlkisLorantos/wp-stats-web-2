@@ -5,8 +5,19 @@ export type Player = {
   lastName: string;
   position?: string;
   capNumber?: number;
+  totals?: PlayerStats;
+  games?: {
+    gameId: number;
+    date: string;
+    opponent: string;
+    goals: number;
+    assists: number;
+    shots: number;
+    steals: number;
+    blocks: number;
+    exclusions: number;
+  }[];
 };
-
 export type RosterPlayer = {
   id: number;
   capNumber: number;

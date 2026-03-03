@@ -10,78 +10,112 @@ export default async function PlayersPage() {
   const players = await getPlayers();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
+    <div className="min-h-screen bg-white text-gray-900">
+      <header className="bg-gray-100 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
+            <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
               ← Back
             </Link>
-            <h1 className="text-xl font-bold">Players</h1>
+            <h1 className="text-2xl font-bold">Players</h1>
           </div>
+          <span className="text-gray-500">{players.length} players</span>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <form action={createPlayer} className="mb-8 p-4 bg-white rounded-lg shadow">
-          <h2 className="font-semibold mb-4">Add Player</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <input
-              name="firstName"
-              placeholder="First name"
-              required
-              className="px-3 py-2 border rounded-md"
-            />
-            <input
-              name="lastName"
-              placeholder="Last name"
-              required
-              className="px-3 py-2 border rounded-md"
-            />
-            <input
-              name="position"
-              placeholder="Position (optional)"
-              className="px-3 py-2 border rounded-md"
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-            >
-              Add
-            </button>
-          </div>
-        </form>
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Add Player Form */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Add Player</h2>
+          <form action={createPlayer}>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <input
+                name="firstName"
+                placeholder="First name"
+                required
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                name="lastName"
+                placeholder="Last name"
+                required
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                name="position"
+                placeholder="Position (optional)"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Add Player
+              </button>
+            </div>
+          </form>
+        </div>
 
-        {players.length === 0 ? (
-          <p className="text-gray-600">No players yet. Add your first player above.</p>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-4 py-3">Name</th>
-                  <th className="text-left px-4 py-3">Position</th>
-                  <th className="text-right px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {players.map((player) => (
-                  <tr key={player.id} className="border-t">
-                    <td className="px-4 py-3">{player.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{player.position || "-"}</td>
-                    <td className="px-4 py-3 text-right">
-                      <form action={async () => { "use server"; await deletePlayer(player.id); }} className="inline">
-                        <button type="submit" className="text-red-600 hover:underline text-sm">
-                          Delete
-                        </button>
-                      </form>
-                    </td>
+        {/* Players List */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Roster</h2>
+          
+          {players.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No players yet. Add your first player above.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-gray-500 border-b border-gray-300">
+                    <th className="text-left py-3 px-2">#</th>
+                    <th className="text-left py-3 px-2">Name</th>
+                    <th className="text-left py-3 px-2">Position</th>
+                    <th className="text-right py-3 px-2">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {players.map((player) => (
+                    <tr key={player.id} className="border-b border-gray-200 hover:bg-gray-100">
+                      <td className="py-3 px-2 text-gray-500">
+                        {player.capNumber || "-"}
+                      </td>
+                      <td className="py-3 px-2">
+                        <Link href={`/players/${player.id}`} className="font-medium hover:text-blue-600">
+                          {player.name}
+                        </Link>
+                      </td>
+                      <td className="py-3 px-2 text-gray-500">
+                        {player.position || "-"}
+                      </td>
+                      <td className="py-3 px-2 text-right space-x-4">
+                        <Link
+                          href={`/players/${player.id}`}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          View Stats
+                        </Link>
+                        <form
+                          action={async () => {
+                            "use server";
+                            await deletePlayer(player.id);
+                          }}
+                          className="inline"
+                        >
+                          <button
+                            type="submit"
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
