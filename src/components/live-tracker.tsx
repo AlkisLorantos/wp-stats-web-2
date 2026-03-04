@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   createStat,
   deleteStat,
@@ -146,9 +146,8 @@ export function LiveTracker({
   const [editingEvent, setEditingEvent] = useState<StatEvent | null>(null);
 
   const [activeTab, setActiveTab] = useState<"stats" | "subs" | "boxscore">(
-    "stats",
+    "stats"
   );
-  const [inWater, setInWater] = useState<number[]>(lineups[period] || []);
   const [playerOut, setPlayerOut] = useState<number | null>(null);
   const [playerIn, setPlayerIn] = useState<number | null>(null);
 
@@ -165,24 +164,65 @@ export function LiveTracker({
     C: null,
   });
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(
-    null,
+    null
   );
   const [assigningPosition, setAssigningPosition] = useState<Position | null>(
-    null,
+    null
   );
 
+  const [lineupSaved, setLineupSaved] = useState<Record<number, boolean>>({
+    1: false,
+    2: false,
+    3: false,
+    4: false,
+  });
+
+  // Load formation from lineups when period changes
+  useEffect(() => {
+    const periodLineup = lineups[period];
+    if (periodLineup && periodLineup.length === 7) {
+      const positions: Position[] = ["GK", "LW", "CB", "RW", "LD", "RD", "C"];
+      const newFormation: Formation = {
+        GK: null,
+        LW: null,
+        CB: null,
+        RW: null,
+        LD: null,
+        RD: null,
+        C: null,
+      };
+
+      periodLineup.forEach((playerId, index) => {
+        if (positions[index]) {
+          newFormation[positions[index]] = playerId;
+        }
+      });
+
+      setFormation(newFormation);
+      setLineupSaved((prev) => ({ ...prev, [period]: true }));
+    } else {
+      setFormation({
+        GK: null,
+        LW: null,
+        CB: null,
+        RW: null,
+        LD: null,
+        RD: null,
+        C: null,
+      });
+      setLineupSaved((prev) => ({ ...prev, [period]: false }));
+    }
+  }, [period, lineups]);
+
   const playersInFormation = Object.values(formation).filter(
-    Boolean,
+    Boolean
   ) as number[];
   const onBench = roster.filter(
-    (r) => !playersInFormation.includes(r.playerId),
-  );
-  const goalkeepersInWater = roster.filter(
-    (r) => inWater.includes(r.playerId) && isGoalkeeper(r.capNumber),
+    (r) => !playersInFormation.includes(r.playerId)
   );
 
   const selectedRosterPlayer = roster.find(
-    (r) => r.playerId === selectedPlayer,
+    (r) => r.playerId === selectedPlayer
   );
   const isSelectedGK = selectedPlayer ? formation.GK === selectedPlayer : false;
 
@@ -192,8 +232,12 @@ export function LiveTracker({
     return true;
   });
 
+  const canRecordStats =
+    lineupSaved[period] &&
+    Object.values(formation).filter(Boolean).length === 7;
+
   const handleRecordEvent = async (eventType: string) => {
-    if (!selectedPlayer || recording) return;
+    if (!selectedPlayer || recording || !canRecordStats) return;
 
     const clockValue = minutes + seconds / 60;
 
@@ -222,7 +266,7 @@ export function LiveTracker({
     if (result.success) {
       const player = roster.find((r) => r.playerId === selectedPlayer);
       setLastRecorded(
-        `${eventType} - #${player?.capNumber} ${player?.player.name}`,
+        `${eventType} - #${player?.capNumber} ${player?.player.name}`
       );
       setSelectedPlayer(null);
     }
@@ -262,51 +306,13 @@ export function LiveTracker({
       const outcomeText =
         data.outcome === "GOAL" ? "GOAL" : `SHOT (${data.outcome})`;
       setLastRecorded(
-        `${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`,
+        `${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`
       );
     }
 
     setShotPlayer(null);
     setRecording(false);
   };
-
-  // const handleGoalWithAssist = async (assistPlayerId: number | null) => {
-  //   if (!pendingGoal) return;
-
-  //   setRecording(true);
-  //   setShowAssistPrompt(false);
-
-  //   const result = await createGoalWithAssist(gameId, {
-  //     scorerId: pendingGoal.playerId,
-  //     assisterId: assistPlayerId,
-  //     period: pendingGoal.period,
-  //     clock: pendingGoal.clock,
-  //     context: pendingGoal.context,
-  //   });
-
-  //   if (result.success) {
-  //     const scorer = roster.find((r) => r.playerId === pendingGoal.playerId);
-  //     const assister = assistPlayerId
-  //       ? roster.find((r) => r.playerId === assistPlayerId)
-  //       : null;
-
-  //     if (assister) {
-  //       setLastRecorded(
-  //         `GOAL - #${scorer?.capNumber} ${scorer?.player.name} (assist: #${assister.capNumber})`,
-  //       );
-  //     } else {
-  //       setLastRecorded(`GOAL - #${scorer?.capNumber} ${scorer?.player.name}`);
-  //     }
-  //   }
-
-  //   setPendingGoal(null);
-  //   setRecording(false);
-  // };
-
-  // const cancelAssistPrompt = () => {
-  //   setShowAssistPrompt(false);
-  //   setPendingGoal(null);
-  // };
 
   const handleUndo = async () => {
     if (stats.length === 0) return;
@@ -363,11 +369,20 @@ export function LiveTracker({
   };
 
   const handleSaveLineup = async () => {
-    if (inWater.length !== 7) {
+    const playerIds = Object.values(formation).filter(Boolean) as number[];
+
+    if (playerIds.length !== 7) {
       alert("Starting lineup must have exactly 7 players");
       return;
     }
-    await saveStartingLineup(gameId, period, inWater);
+
+    const result = await saveStartingLineup(gameId, period, playerIds);
+
+    if (result.success) {
+      setLineupSaved((prev) => ({ ...prev, [period]: true }));
+    } else {
+      alert(result.error || "Failed to save lineup");
+    }
   };
 
   const handleSubstitution = async () => {
@@ -395,7 +410,6 @@ export function LiveTracker({
 
   const handlePeriodChange = (newPeriod: number) => {
     setPeriod(newPeriod);
-    setInWater(lineups[newPeriod] || []);
     setMinutes(8);
     setSeconds(0);
   };
@@ -454,7 +468,7 @@ export function LiveTracker({
                     period === p
                       ? "bg-blue-600 text-white"
                       : "bg-gray-700 text-gray-400 hover:bg-gray-600"
-                  }`}
+                  } ${lineupSaved[p] ? "ring-2 ring-green-500" : ""}`}
                 >
                   {p}
                 </button>
@@ -579,7 +593,7 @@ export function LiveTracker({
                   <div className="grid grid-cols-4 gap-2">
                     {roster
                       .filter(
-                        (r) => !Object.values(formation).includes(r.playerId),
+                        (r) => !Object.values(formation).includes(r.playerId)
                       )
                       .sort((a, b) => a.capNumber - b.capNumber)
                       .map((r) => (
@@ -618,6 +632,16 @@ export function LiveTracker({
                   </button>
                 </div>
               )}
+
+              {!lineupSaved[period] &&
+                Object.values(formation).filter(Boolean).length === 7 && (
+                  <button
+                    onClick={handleSaveLineup}
+                    className="mt-4 w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-medium"
+                  >
+                    Save Q{period} Lineup to Start
+                  </button>
+                )}
             </div>
 
             <div className="bg-gray-800 rounded-xl p-4">
@@ -650,6 +674,12 @@ export function LiveTracker({
                     : "Select a player first"}
               </h2>
 
+              {!lineupSaved[period] && (
+                <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500 rounded-lg text-yellow-400 text-sm">
+                  Save lineup for Q{period} before recording stats
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 {eventTypes.map((event) => (
                   <button
@@ -659,9 +689,9 @@ export function LiveTracker({
                         ? handleUpdateEvent(event.key)
                         : handleRecordEvent(event.key)
                     }
-                    disabled={!selectedPlayer || recording}
+                    disabled={!selectedPlayer || recording || !canRecordStats}
                     className={`p-4 rounded-xl text-lg font-semibold transition-all ${event.color} ${
-                      !selectedPlayer || recording
+                      !selectedPlayer || recording || !canRecordStats
                         ? "opacity-50 cursor-not-allowed"
                         : "active:scale-95"
                     } ${editingEvent?.type === event.key ? "ring-2 ring-white" : ""}`}
@@ -763,13 +793,17 @@ export function LiveTracker({
                 <h2 className="text-lg font-semibold">
                   In Water ({Object.values(formation).filter(Boolean).length}/7)
                 </h2>
-                {Object.values(formation).filter(Boolean).length === 7 && (
-                  <button
-                    onClick={handleSaveLineup}
-                    className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded-lg text-sm"
-                  >
-                    Save Q{period} Lineup
-                  </button>
+                {Object.values(formation).filter(Boolean).length === 7 &&
+                  !lineupSaved[period] && (
+                    <button
+                      onClick={handleSaveLineup}
+                      className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded-lg text-sm"
+                    >
+                      Save Q{period} Lineup
+                    </button>
+                  )}
+                {lineupSaved[period] && (
+                  <span className="text-green-400 text-sm">✓ Lineup Saved</span>
                 )}
               </div>
 
@@ -814,12 +848,19 @@ export function LiveTracker({
                           ) {
                             setAssigningPosition(
                               (Object.keys(formation) as Position[]).find(
-                                (pos) => !formation[pos],
-                              ) || null,
+                                (pos) => !formation[pos]
+                              ) || null
                             );
                             handleAssignPlayer(r.playerId);
                           }
                         }}
+                        className={`p-2 rounded-lg text-center ${
+                          playerIn === r.playerId
+                            ? "bg-green-600 ring-2 ring-green-400"
+                            : gk
+                              ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
+                              : "bg-gray-700 hover:bg-gray-600"
+                        }`}
                       >
                         <div
                           className={`text-2xl font-bold ${gk ? "text-red-400" : "text-white"}`}
@@ -907,6 +948,7 @@ export function LiveTracker({
           </div>
         </div>
       )}
+
       {activeTab === "boxscore" && (
         <BoxScore
           roster={roster}
