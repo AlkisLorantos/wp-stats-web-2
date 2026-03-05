@@ -17,6 +17,7 @@ import type {
   Formation,
   Game,
 } from "@/types";
+import { startGame, endGame } from "@/lib/games";
 import { isGoalkeeper, formatClock, formatSeconds } from "@/lib/utils";
 import { ShotLocationModal } from "./shot-location-modal";
 import { FormationView } from "./formation-view";
@@ -145,8 +146,11 @@ export function LiveTracker({
   const [lastRecorded, setLastRecorded] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<StatEvent | null>(null);
 
+  const [starting, setStarting] = useState(false);
+  const [ending, setEnding] = useState(false);
+
   const [activeTab, setActiveTab] = useState<"stats" | "subs" | "boxscore">(
-    "stats"
+    "stats",
   );
   const [playerOut, setPlayerOut] = useState<number | null>(null);
   const [playerIn, setPlayerIn] = useState<number | null>(null);
@@ -164,10 +168,10 @@ export function LiveTracker({
     C: null,
   });
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(
-    null
+    null,
   );
   const [assigningPosition, setAssigningPosition] = useState<Position | null>(
-    null
+    null,
   );
 
   const [lineupSaved, setLineupSaved] = useState<Record<number, boolean>>({
@@ -177,7 +181,6 @@ export function LiveTracker({
     4: false,
   });
 
-  // Load formation from lineups when period changes
   useEffect(() => {
     const periodLineup = lineups[period];
     if (periodLineup && periodLineup.length === 7) {
@@ -215,14 +218,14 @@ export function LiveTracker({
   }, [period, lineups]);
 
   const playersInFormation = Object.values(formation).filter(
-    Boolean
+    Boolean,
   ) as number[];
   const onBench = roster.filter(
-    (r) => !playersInFormation.includes(r.playerId)
+    (r) => !playersInFormation.includes(r.playerId),
   );
 
   const selectedRosterPlayer = roster.find(
-    (r) => r.playerId === selectedPlayer
+    (r) => r.playerId === selectedPlayer,
   );
   const isSelectedGK = selectedPlayer ? formation.GK === selectedPlayer : false;
 
@@ -233,6 +236,7 @@ export function LiveTracker({
   });
 
   const canRecordStats =
+    game.status == "LIVE" &&
     lineupSaved[period] &&
     Object.values(formation).filter(Boolean).length === 7;
 
@@ -266,7 +270,7 @@ export function LiveTracker({
     if (result.success) {
       const player = roster.find((r) => r.playerId === selectedPlayer);
       setLastRecorded(
-        `${eventType} - #${player?.capNumber} ${player?.player.name}`
+        `${eventType} - #${player?.capNumber} ${player?.player.name}`,
       );
       setSelectedPlayer(null);
     }
@@ -306,7 +310,7 @@ export function LiveTracker({
       const outcomeText =
         data.outcome === "GOAL" ? "GOAL" : `SHOT (${data.outcome})`;
       setLastRecorded(
-        `${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`
+        `${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`,
       );
     }
 
@@ -368,6 +372,38 @@ export function LiveTracker({
     setSeconds(0);
   };
 
+  const handleStartGame = async () => {
+    if (Object.values(formation).filter(Boolean).length !== 7) {
+      alert("Set Q1 lineup with 7 players before starting");
+      return;
+    }
+
+    if (!lineupSaved[1]) {
+      alert("Save Q1 lineup before starting the game");
+      return;
+    }
+
+    setStarting(true);
+    const result = await startGame(gameId);
+
+    if (result.error) {
+      alert(result.error);
+    }
+    setStarting(false);
+  };
+
+  const handleEndGame = async () => {
+    if (!confirm("Are you sure you want to end this game?")) return;
+
+    setEnding(true);
+    const result = await endGame(gameId);
+
+    if (result.error) {
+      alert(result.error);
+    }
+    setEnding(false);
+  };
+
   const handleSaveLineup = async () => {
     const playerIds = Object.values(formation).filter(Boolean) as number[];
 
@@ -409,6 +445,19 @@ export function LiveTracker({
   };
 
   const handlePeriodChange = (newPeriod: number) => {
+    if (game.status !== "LIVE") {
+      setPeriod(newPeriod);
+      setMinutes(8);
+      setSeconds(0);
+      return;
+    }
+    if (!lineups[newPeriod] || lineups[newPeriod].length !== 7) {
+      setPeriod(newPeriod);
+      setMinutes(8);
+      setSeconds(0);
+      return;
+    }
+
     setPeriod(newPeriod);
     setMinutes(8);
     setSeconds(0);
@@ -568,6 +617,49 @@ export function LiveTracker({
         </div>
       )}
 
+      {game.status === "UPCOMING" && (
+        <div className="bg-blue-500/20 border border-blue-500 rounded-xl p-4 flex justify-between items-center">
+          <div>
+            <span className="text-blue-400 font-medium">Game not started</span>
+            <p className="text-sm text-gray-400">
+              Set Q1 lineup and save it to start the game
+            </p>
+          </div>
+          <button
+            onClick={handleStartGame}
+            disabled={!lineupSaved[1] || starting}
+            className="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {starting ? "Starting..." : "Start Game"}
+          </button>
+        </div>
+      )}
+
+      {game.status === "LIVE" && (
+        <div className="bg-green-500/20 border border-green-500 rounded-xl p-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <span className="text-green-400 font-medium">Game is LIVE</span>
+          </div>
+          <button
+            onClick={handleEndGame}
+            disabled={ending}
+            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium disabled:opacity-50"
+          >
+            {ending ? "Ending..." : "End Game"}
+          </button>
+        </div>
+      )}
+
+      {game.status === "ENDED" && (
+        <div className="bg-gray-500/20 border border-gray-500 rounded-xl p-4">
+          <span className="text-gray-400 font-medium">Game has ended</span>
+          <p className="text-sm text-gray-500">
+            Final score: {game.teamScore} - {game.opponentScore}
+          </p>
+        </div>
+      )}
+
       {activeTab === "stats" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-4">
@@ -593,7 +685,7 @@ export function LiveTracker({
                   <div className="grid grid-cols-4 gap-2">
                     {roster
                       .filter(
-                        (r) => !Object.values(formation).includes(r.playerId)
+                        (r) => !Object.values(formation).includes(r.playerId),
                       )
                       .sort((a, b) => a.capNumber - b.capNumber)
                       .map((r) => (
@@ -680,6 +772,12 @@ export function LiveTracker({
                 </div>
               )}
 
+              {game.status === "ENDED" && (
+                <div className="mb-4 p-3 bg-gray-500/20 border border-gray-500 rounded-lg text-gray-400 text-sm">
+                  Game has ended. Stats are view-only.
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 {eventTypes.map((event) => (
                   <button
@@ -689,7 +787,12 @@ export function LiveTracker({
                         ? handleUpdateEvent(event.key)
                         : handleRecordEvent(event.key)
                     }
-                    disabled={!selectedPlayer || recording || !canRecordStats}
+                    disabled={
+                      !selectedPlayer ||
+                      recording ||
+                      !canRecordStats ||
+                      game.status === "ENDED"
+                    }
                     className={`p-4 rounded-xl text-lg font-semibold transition-all ${event.color} ${
                       !selectedPlayer || recording || !canRecordStats
                         ? "opacity-50 cursor-not-allowed"
@@ -848,8 +951,8 @@ export function LiveTracker({
                           ) {
                             setAssigningPosition(
                               (Object.keys(formation) as Position[]).find(
-                                (pos) => !formation[pos]
-                              ) || null
+                                (pos) => !formation[pos],
+                              ) || null,
                             );
                             handleAssignPlayer(r.playerId);
                           }
