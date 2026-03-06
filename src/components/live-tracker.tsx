@@ -236,7 +236,6 @@ export function LiveTracker({
   });
 
   const canRecordStats =
-    game.status == "LIVE" &&
     lineupSaved[period] &&
     Object.values(formation).filter(Boolean).length === 7;
 
@@ -652,11 +651,16 @@ export function LiveTracker({
       )}
 
       {game.status === "ENDED" && (
-        <div className="bg-gray-500/20 border border-gray-500 rounded-xl p-4">
-          <span className="text-gray-400 font-medium">Game has ended</span>
-          <p className="text-sm text-gray-500">
-            Final score: {game.teamScore} - {game.opponentScore}
-          </p>
+        <div className="bg-gray-500/20 border border-gray-500 rounded-xl p-4 flex justify-between items-center">
+          <div>
+            <span className="text-gray-400 font-medium">Game ended</span>
+            <p className="text-sm text-gray-500">
+              Final score: {game.teamScore} - {game.opponentScore}
+            </p>
+          </div>
+          <span className="text-sm text-gray-500">
+            Review mode — stats can be edited
+          </span>
         </div>
       )}
 
@@ -774,7 +778,7 @@ export function LiveTracker({
 
               {game.status === "ENDED" && (
                 <div className="mb-4 p-3 bg-gray-500/20 border border-gray-500 rounded-lg text-gray-400 text-sm">
-                  Game has ended. Stats are view-only.
+                  Reviewing game. You can add, edit, or delete stats.
                 </div>
               )}
 
@@ -787,12 +791,7 @@ export function LiveTracker({
                         ? handleUpdateEvent(event.key)
                         : handleRecordEvent(event.key)
                     }
-                    disabled={
-                      !selectedPlayer ||
-                      recording ||
-                      !canRecordStats ||
-                      game.status === "ENDED"
-                    }
+                    disabled={!selectedPlayer || recording || !canRecordStats}
                     className={`p-4 rounded-xl text-lg font-semibold transition-all ${event.color} ${
                       !selectedPlayer || recording || !canRecordStats
                         ? "opacity-50 cursor-not-allowed"
