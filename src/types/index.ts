@@ -34,6 +34,12 @@ export type Game = {
   status: "UPCOMING" | "LIVE" | "ENDED";
   teamScore: number;
   opponentScore: number;
+  competition?: {
+    id: number;
+    name: string;
+    type?: string;
+    season?: string;
+  };
 };
 
 export type StatEvent = {

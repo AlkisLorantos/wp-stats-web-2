@@ -27,13 +27,20 @@ export async function createGame(formData: FormData) {
   const date = formData.get("date") as string;
   const location = formData.get("location") as string;
   const homeOrAway = formData.get("homeOrAway") as string;
+  const competitionId = formData.get("competitionId") as string;
 
   if (!opponent || !date) {
     return { error: "Opponent and date are required" };
   }
 
   try {
-    await api("games", "POST", { opponent, date, location, homeOrAway });
+    await api("games", "POST", { 
+      opponent, 
+      date, 
+      location, 
+      homeOrAway,
+      competitionId: competitionId ? Number(competitionId) : undefined,
+    });
     revalidatePath("/games");
     return { success: true };
   } catch (err: any) {

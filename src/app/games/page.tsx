@@ -1,4 +1,5 @@
 import { getGames, createGame, deleteGame } from "@/lib/games";
+import { getCompetitions } from "@/lib/competition";
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -7,7 +8,10 @@ export default async function GamesPage() {
   const user = await getUser();
   if (!user) redirect("/login");
 
-  const games = await getGames();
+  const [games, competitions] = await Promise.all([
+    getGames(),
+    getCompetitions(),
+  ]);
 
   const upcomingGames = games.filter((g) => g.status === "UPCOMING");
   const liveGames = games.filter((g) => g.status === "LIVE");
@@ -32,7 +36,7 @@ export default async function GamesPage() {
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Schedule Game</h2>
           <form action={createGame}>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <input
                 name="opponent"
                 placeholder="Opponent"
@@ -59,6 +63,17 @@ export default async function GamesPage() {
                 <option value="home">Home</option>
                 <option value="away">Away</option>
               </select>
+              <select
+                name="competitionId"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Competition (optional)</option>
+                {competitions.map((comp) => (
+                  <option key={comp.id} value={comp.id}>
+                    {comp.name} {comp.season ? `(${comp.season})` : ""}
+                  </option>
+                ))}
+              </select>
               <button
                 type="submit"
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
@@ -66,6 +81,14 @@ export default async function GamesPage() {
                 Add Game
               </button>
             </div>
+            {competitions.length === 0 && (
+              <p className="text-sm text-gray-500 mt-2">
+                No competitions yet.{" "}
+                <Link href="/competitions" className="text-blue-600 hover:underline">
+                  Create one
+                </Link>
+              </p>
+            )}
           </form>
         </div>
 
@@ -86,6 +109,11 @@ export default async function GamesPage() {
                     <div className="font-semibold text-lg">vs {game.opponent}</div>
                     <div className="text-sm text-gray-500">
                       {new Date(game.date).toLocaleDateString()} • {game.location || "TBD"}
+                      {game.competition && (
+                        <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                          {game.competition.name}
+                        </span>
+                      )}
                     </div>
                     <div className="text-2xl font-bold mt-1">
                       <span className="text-green-600">{game.teamScore}</span>
@@ -118,6 +146,7 @@ export default async function GamesPage() {
                   <tr className="text-gray-500 border-b border-gray-300">
                     <th className="text-left py-3 px-2">Date</th>
                     <th className="text-left py-3 px-2">Opponent</th>
+                    <th className="text-left py-3 px-2">Competition</th>
                     <th className="text-left py-3 px-2">Location</th>
                     <th className="text-center py-3 px-2">Home/Away</th>
                     <th className="text-right py-3 px-2">Actions</th>
@@ -133,6 +162,15 @@ export default async function GamesPage() {
                         <Link href={`/games/${game.id}`} className="font-medium hover:text-blue-600">
                           vs {game.opponent}
                         </Link>
+                      </td>
+                      <td className="py-3 px-2">
+                        {game.competition ? (
+                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                            {game.competition.name}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="py-3 px-2 text-gray-500">{game.location || "TBD"}</td>
                       <td className="text-center py-3 px-2">
@@ -187,6 +225,7 @@ export default async function GamesPage() {
                   <tr className="text-gray-500 border-b border-gray-300">
                     <th className="text-left py-3 px-2">Date</th>
                     <th className="text-left py-3 px-2">Opponent</th>
+                    <th className="text-left py-3 px-2">Competition</th>
                     <th className="text-center py-3 px-2">Score</th>
                     <th className="text-center py-3 px-2">Result</th>
                     <th className="text-right py-3 px-2">Actions</th>
@@ -196,7 +235,6 @@ export default async function GamesPage() {
                   {endedGames.map((game) => {
                     const won = game.teamScore > game.opponentScore;
                     const lost = game.teamScore < game.opponentScore;
-                    const draw = game.teamScore === game.opponentScore;
 
                     return (
                       <tr key={game.id} className="border-b border-gray-200 hover:bg-gray-100">
@@ -207,6 +245,15 @@ export default async function GamesPage() {
                           <Link href={`/games/${game.id}`} className="font-medium hover:text-blue-600">
                             vs {game.opponent}
                           </Link>
+                        </td>
+                        <td className="py-3 px-2">
+                          {game.competition ? (
+                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                              {game.competition.name}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
                         </td>
                         <td className="text-center py-3 px-2">
                           <span className="text-green-600 font-medium">{game.teamScore}</span>
