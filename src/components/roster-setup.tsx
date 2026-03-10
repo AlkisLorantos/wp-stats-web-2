@@ -18,6 +18,8 @@ export function RosterSetup({ gameId, roster, availablePlayers, presets }: Props
   const [presetName, setPresetName] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
+  const [selectedCapNumber, setSelectedCapNumber] = useState<number | null>(null);
 
   const usedCapNumbers = roster.map((r) => r.capNumber);
   const availableCapNumbers = Array.from({ length: 14 }, (_, i) => i + 1).filter(
@@ -26,6 +28,21 @@ export function RosterSetup({ gameId, roster, availablePlayers, presets }: Props
 
   const goalkeepers = roster.filter((r) => isGoalkeeper(r.capNumber));
   const fieldPlayers = roster.filter((r) => !isGoalkeeper(r.capNumber));
+
+  const handlePlayerSelect = (playerId: number | null) => {
+    setSelectedPlayerId(playerId);
+    
+    if (playerId) {
+      const player = availablePlayers.find((p) => p.id === playerId);
+      if (player?.capNumber && availableCapNumbers.includes(player.capNumber)) {
+        setSelectedCapNumber(player.capNumber);
+      } else {
+        setSelectedCapNumber(null);
+      }
+    } else {
+      setSelectedCapNumber(null);
+    }
+  };
 
   const handleSavePreset = async () => {
     if (!presetName.trim() || roster.length === 0) return;
@@ -67,7 +84,11 @@ export function RosterSetup({ gameId, roster, availablePlayers, presets }: Props
     await deletePreset(presetId);
   };
 
-  const addToRosterWithId = addToRoster.bind(null, gameId);
+  const handleAddToRoster = async (formData: FormData) => {
+    await addToRoster(gameId, formData);
+    setSelectedPlayerId(null);
+    setSelectedCapNumber(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -151,30 +172,38 @@ export function RosterSetup({ gameId, roster, availablePlayers, presets }: Props
         </p>
 
         {availablePlayers.length > 0 && availableCapNumbers.length > 0 && (
-          <form action={addToRosterWithId} className="flex gap-3 mb-6">
+          <form action={handleAddToRoster} className="flex gap-3 mb-6">
             <select
               name="playerId"
               required
+              value={selectedPlayerId || ""}
+              onChange={(e) => handlePlayerSelect(e.target.value ? Number(e.target.value) : null)}
               className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
             >
               <option value="">Select player</option>
               {availablePlayers.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {p.name} {p.capNumber ? `(#${p.capNumber})` : ""}
                 </option>
               ))}
             </select>
             <select
               name="capNumber"
               required
+              value={selectedCapNumber || ""}
+              onChange={(e) => setSelectedCapNumber(e.target.value ? Number(e.target.value) : null)}
               className="w-36 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white"
             >
               <option value="">Cap #</option>
-              {availableCapNumbers.map((n) => (
-                <option key={n} value={n}>
-                  {n} {isGoalkeeper(n) ? "(GK)" : ""}
-                </option>
-              ))}
+              {availableCapNumbers.map((n) => {
+                const isDefault = selectedPlayerId && 
+                  availablePlayers.find((p) => p.id === selectedPlayerId)?.capNumber === n;
+                return (
+                  <option key={n} value={n}>
+                    {n} {isGoalkeeper(n) ? "(GK)" : ""} {isDefault ? "★" : ""}
+                  </option>
+                );
+              })}
             </select>
             <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
               Add

@@ -1,7 +1,20 @@
-import { getPlayers, createPlayer, deletePlayer } from "@/lib/players";
+import { getPlayers, createPlayer, deletePlayer, updatePlayer } from "@/lib/players";
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Navbar } from "@/components/navbar";
+import { PlayerCapInput } from "@/components/player-cap-input";
+import { PlayerPositionInput } from "@/components/player-position-input";
+
+async function updateCapNumber(playerId: number, capNumber: number | null) {
+  "use server";
+  await updatePlayer(playerId, { capNumber });
+}
+
+async function updatePosition(playerId: number, position: string | undefined) {
+  "use server";
+  await updatePlayer(playerId, { position });
+}
 
 export default async function PlayersPage() {
   const user = await getUser();
@@ -9,113 +22,164 @@ export default async function PlayersPage() {
 
   const players = await getPlayers();
 
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (a.capNumber && b.capNumber) return a.capNumber - b.capNumber;
+    if (a.capNumber) return -1;
+    if (b.capNumber) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const assignedCount = players.filter((p) => p.capNumber).length;
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <header className="bg-gray-100 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
-              ← Back
-            </Link>
-            <h1 className="text-2xl font-bold">Players</h1>
+      <Navbar username={user.username} />
+
+      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold">Team Roster</h1>
+            <p className="text-gray-500 mt-1">
+              {players.length} players • {assignedCount} with cap numbers
+            </p>
           </div>
-          <span className="text-gray-500">{players.length} players</span>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Add Player Form */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Add Player</h2>
-          <form action={createPlayer}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <input
-                name="firstName"
-                placeholder="First name"
-                required
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                name="lastName"
-                placeholder="Last name"
-                required
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                name="position"
-                placeholder="Position (optional)"
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
-              >
-                Add Player
-              </button>
-            </div>
-          </form>
         </div>
 
-        {/* Players List */}
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Roster</h2>
-          
-          {players.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No players yet. Add your first player above.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-gray-500 border-b border-gray-300">
-                    <th className="text-left py-3 px-2">#</th>
-                    <th className="text-left py-3 px-2">Name</th>
-                    <th className="text-left py-3 px-2">Position</th>
-                    <th className="text-right py-3 px-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {players.map((player) => (
-                    <tr key={player.id} className="border-b border-gray-200 hover:bg-gray-100">
-                      <td className="py-3 px-2 text-gray-500">
-                        {player.capNumber || "-"}
+        <form action={createPlayer} className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+          <div className="flex flex-wrap gap-3">
+            <input
+              name="firstName"
+              placeholder="First name"
+              required
+              className="flex-1 min-w-[140px] px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <input
+              name="lastName"
+              placeholder="Last name"
+              required
+              className="flex-1 min-w-[140px] px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <input
+              name="position"
+              placeholder="Position"
+              className="w-32 px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <input
+              name="capNumber"
+              type="number"
+              min="1"
+              max="99"
+              placeholder="Cap #"
+              className="w-20 px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+            />
+            <button
+              type="submit"
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+            >
+              Add Player
+            </button>
+          </div>
+        </form>
+
+        {players.length === 0 ? (
+          <div className="text-center py-16 text-gray-500">
+            <p className="text-lg">No players yet</p>
+            <p className="text-sm mt-1">Add your first player above</p>
+          </div>
+        ) : (
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 text-left text-sm text-gray-500">
+                  <th className="py-3 px-4 font-medium w-24">Cap #</th>
+                  <th className="py-3 px-4 font-medium">Name</th>
+                  <th className="py-3 px-4 font-medium w-32">Position</th>
+                  <th className="py-3 px-4 font-medium text-right w-32">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {sortedPlayers.map((player) => {
+                  const isGoalkeeper = player.capNumber === 1 || player.capNumber === 13;
+
+                  return (
+                    <tr
+                      key={player.id}
+                      className={`group hover:bg-gray-50 transition-colors ${
+                        isGoalkeeper ? "bg-red-50/50" : ""
+                      }`}
+                    >
+                      <td className="py-2 px-4">
+                        <PlayerCapInput
+                          playerId={player.id}
+                          capNumber={player.capNumber}
+                          isGoalkeeper={isGoalkeeper}
+                          updateAction={updateCapNumber}
+                        />
                       </td>
-                      <td className="py-3 px-2">
-                        <Link href={`/players/${player.id}`} className="font-medium hover:text-blue-600">
+                      <td className="py-3 px-4">
+                        <Link
+                          href={`/players/${player.id}`}
+                          className="font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                        >
                           {player.name}
                         </Link>
                       </td>
-                      <td className="py-3 px-2 text-gray-500">
-                        {player.position || "-"}
+                      <td className="py-3 px-4">
+                        <PlayerPositionInput
+                          playerId={player.id}
+                          position={player.position}
+                          updateAction={updatePosition}
+                        />
                       </td>
-                      <td className="py-3 px-2 text-right space-x-4">
-                        <Link
-                          href={`/players/${player.id}`}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          View Stats
-                        </Link>
-                        <form
-                          action={async () => {
-                            "use server";
-                            await deletePlayer(player.id);
-                          }}
-                          className="inline"
-                        >
-                          <button
-                            type="submit"
-                            className="text-red-500 hover:text-red-700"
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link
+                            href={`/players/${player.id}`}
+                            className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           >
-                            Delete
-                          </button>
-                        </form>
+                            Stats
+                          </Link>
+                          <form
+                            action={async () => {
+                              "use server";
+                              await deletePlayer(player.id);
+                            }}
+                          >
+                            <button
+                              type="submit"
+                              className="px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </form>
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Legend */}
+        {players.length > 0 && (
+          <div className="flex items-center gap-6 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-red-100 border-2 border-red-300"></span>
+              <span>Goalkeeper (1, 13)</span>
             </div>
-          )}
-        </div>
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-blue-50 border-2 border-blue-300"></span>
+              <span>Field player</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded bg-gray-50 border-2 border-gray-200"></span>
+              <span>Unassigned</span>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

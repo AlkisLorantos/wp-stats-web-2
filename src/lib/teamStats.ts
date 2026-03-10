@@ -1,6 +1,7 @@
 "use server";
 
 import { api } from "@/lib/api/fetch";
+import { PlayerWithStats } from "@/types";
 
 export type TeamStats = {
   totals: {
@@ -28,23 +29,10 @@ export type TeamStats = {
     shotsPerGame: string;
     shootingPct: number;
   };
-  topScorers: PlayerStat[];
-  topAssisters: PlayerStat[];
-  topShooters: (PlayerStat & { shootingPct: number })[];
-  allPlayers: PlayerStat[];
-};
-
-export type PlayerStat = {
-  playerId: number;
-  name: string;
-  goals: number;
-  assists: number;
-  shots: number;
-  steals: number;
-  blocks: number;
-  saves: number;
-  exclusions: number;
-  turnovers: number;
+  topScorers: PlayerWithStats[];
+  topAssisters: PlayerWithStats[];
+  topShooters: (PlayerWithStats & { shootingPct: number })[];
+  allPlayers: PlayerWithStats[];
 };
 
 export async function getTeamStats(): Promise<TeamStats> {

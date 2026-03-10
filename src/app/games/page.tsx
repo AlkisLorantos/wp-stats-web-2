@@ -22,7 +22,10 @@ export default async function GamesPage() {
       <header className="bg-gray-100 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-500 hover:text-gray-900">
+            <Link
+              href="/dashboard"
+              className="text-gray-500 hover:text-gray-900"
+            >
               ← Back
             </Link>
             <h1 className="text-2xl font-bold">Games</h1>
@@ -32,7 +35,6 @@ export default async function GamesPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Schedule Game Form */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Schedule Game</h2>
           <form action={createGame}>
@@ -84,7 +86,10 @@ export default async function GamesPage() {
             {competitions.length === 0 && (
               <p className="text-sm text-gray-500 mt-2">
                 No competitions yet.{" "}
-                <Link href="/competitions" className="text-blue-600 hover:underline">
+                <Link
+                  href="/competitions"
+                  className="text-blue-600 hover:underline"
+                >
                   Create one
                 </Link>
               </p>
@@ -92,7 +97,6 @@ export default async function GamesPage() {
           </form>
         </div>
 
-        {/* Live Games */}
         {liveGames.length > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -106,9 +110,12 @@ export default async function GamesPage() {
                   className="bg-white border border-green-200 rounded-lg p-4 flex justify-between items-center"
                 >
                   <div>
-                    <div className="font-semibold text-lg">vs {game.opponent}</div>
+                    <div className="font-semibold text-lg">
+                      vs {game.opponent}
+                    </div>
                     <div className="text-sm text-gray-500">
-                      {new Date(game.date).toLocaleDateString()} • {game.location || "TBD"}
+                      {new Date(game.date).toLocaleDateString()} •{" "}
+                      {game.location || "TBD"}
                       {game.competition && (
                         <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
                           {game.competition.name}
@@ -121,12 +128,27 @@ export default async function GamesPage() {
                       <span className="text-red-600">{game.opponentScore}</span>
                     </div>
                   </div>
-                  <Link
-                    href={`/games/${game.id}`}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                  >
-                    Track Game
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/games/${game.id}`}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                    >
+                      Track Game
+                    </Link>
+                    <form
+                      action={async () => {
+                        "use server";
+                        await deleteGame(game.id);
+                      }}
+                    >
+                      <button
+                        type="submit"
+                        className="px-3 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </div>
                 </div>
               ))}
             </div>
@@ -154,12 +176,18 @@ export default async function GamesPage() {
                 </thead>
                 <tbody>
                   {upcomingGames.map((game) => (
-                    <tr key={game.id} className="border-b border-gray-200 hover:bg-gray-100">
+                    <tr
+                      key={game.id}
+                      className="border-b border-gray-200 hover:bg-gray-100"
+                    >
                       <td className="py-3 px-2 text-gray-500">
                         {new Date(game.date).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-2">
-                        <Link href={`/games/${game.id}`} className="font-medium hover:text-blue-600">
+                        <Link
+                          href={`/games/${game.id}`}
+                          className="font-medium hover:text-blue-600"
+                        >
                           vs {game.opponent}
                         </Link>
                       </td>
@@ -172,13 +200,17 @@ export default async function GamesPage() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-2 text-gray-500">{game.location || "TBD"}</td>
+                      <td className="py-3 px-2 text-gray-500">
+                        {game.location || "TBD"}
+                      </td>
                       <td className="text-center py-3 px-2">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          game.homeOrAway === "home"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-orange-100 text-orange-700"
-                        }`}>
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full font-medium ${
+                            game.homeOrAway === "home"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}
+                        >
                           {game.homeOrAway === "home" ? "Home" : "Away"}
                         </span>
                       </td>
@@ -237,12 +269,18 @@ export default async function GamesPage() {
                     const lost = game.teamScore < game.opponentScore;
 
                     return (
-                      <tr key={game.id} className="border-b border-gray-200 hover:bg-gray-100">
+                      <tr
+                        key={game.id}
+                        className="border-b border-gray-200 hover:bg-gray-100"
+                      >
                         <td className="py-3 px-2 text-gray-500">
                           {new Date(game.date).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-2">
-                          <Link href={`/games/${game.id}`} className="font-medium hover:text-blue-600">
+                          <Link
+                            href={`/games/${game.id}`}
+                            className="font-medium hover:text-blue-600"
+                          >
                             vs {game.opponent}
                           </Link>
                         </td>
@@ -256,18 +294,24 @@ export default async function GamesPage() {
                           )}
                         </td>
                         <td className="text-center py-3 px-2">
-                          <span className="text-green-600 font-medium">{game.teamScore}</span>
+                          <span className="text-green-600 font-medium">
+                            {game.teamScore}
+                          </span>
                           <span className="text-gray-400 mx-1">-</span>
-                          <span className="text-red-600 font-medium">{game.opponentScore}</span>
+                          <span className="text-red-600 font-medium">
+                            {game.opponentScore}
+                          </span>
                         </td>
                         <td className="text-center py-3 px-2">
-                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                            won
-                              ? "bg-green-100 text-green-700"
-                              : lost
-                                ? "bg-red-100 text-red-700"
-                                : "bg-gray-100 text-gray-700"
-                          }`}>
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full font-medium ${
+                              won
+                                ? "bg-green-100 text-green-700"
+                                : lost
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
                             {won ? "W" : lost ? "L" : "D"}
                           </span>
                         </td>

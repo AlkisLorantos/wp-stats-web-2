@@ -70,6 +70,11 @@ export type PlayerStats = {
   turnovers: number;
 };
 
+export type PlayerWithStats = PlayerStats & {
+  playerId: number;
+  name: string;
+};
+
 export type Substitution = {
   id: number;
   period: number;
