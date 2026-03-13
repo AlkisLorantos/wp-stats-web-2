@@ -3,6 +3,8 @@ import { getCompetitions } from "@/lib/competition";
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Navbar } from "@/components/navbar";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function GamesPage() {
   const user = await getUser();
@@ -19,22 +21,10 @@ export default async function GamesPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <header className="bg-gray-100 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-gray-500 hover:text-gray-900"
-            >
-              ← Back
-            </Link>
-            <h1 className="text-2xl font-bold">Games</h1>
-          </div>
-          <span className="text-gray-500">{games.length} games</span>
-        </div>
-      </header>
+      <Navbar username={user.username} />
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Schedule Game</h2>
           <form action={createGame}>
@@ -155,12 +145,14 @@ export default async function GamesPage() {
           </div>
         )}
 
-        {/* Upcoming Games */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Upcoming</h2>
 
           {upcomingGames.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No upcoming games</p>
+            <EmptyState
+              title="No upcoming games"
+              description="Schedule a game using the form above"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -244,12 +236,14 @@ export default async function GamesPage() {
           )}
         </div>
 
-        {/* Past Games */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Past Games</h2>
 
           {endedGames.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No past games yet</p>
+            <EmptyState
+              title="No past games"
+              description="Completed games will appear here"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

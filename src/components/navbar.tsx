@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { logout } from "@/lib/auth";
 
 type Props = {
   username?: string;
@@ -30,18 +29,10 @@ export function Navbar({ username }: Props) {
 
           <div className="flex items-center gap-4 pl-6 border-l border-gray-300">
             {username && (
-              <Link href="/account" className="text-gray-600 hover:text-gray-900">
+              <Link href="/profile" className="text-gray-600 hover:text-gray-900">
                 {username}
               </Link>
             )}
-            <form action={logout}>
-              <button
-                type="submit"
-                className="text-gray-500 hover:text-gray-900 text-sm"
-              >
-                Logout
-              </button>
-            </form>
           </div>
         </div>
       </div>

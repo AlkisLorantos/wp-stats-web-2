@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LiveTracker } from "@/components/live-tracker";
 import { RosterSetup } from "@/components/roster-setup";
+import { Navbar } from "@/components/navbar";
 
 export default async function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
   const user = await getUser();
@@ -42,6 +43,8 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+            <Navbar username={user.username} />
+
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
