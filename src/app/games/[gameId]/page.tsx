@@ -10,7 +10,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LiveTracker } from "@/components/live-tracker";
 import { RosterSetup } from "@/components/roster-setup";
-import { Navbar } from "@/components/navbar";
 
 export default async function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
   const user = await getUser();
@@ -43,13 +42,11 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-            <Navbar username={user.username} />
-
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link href="/games" className="text-gray-400 hover:text-white">
-              ← Back
+              ← Games
             </Link>
             <h1 className="text-xl font-bold">vs {game.opponent}</h1>
             <span className={`text-xs px-2 py-1 rounded font-medium ${
@@ -59,6 +56,11 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
             }`}>
               {game.status}
             </span>
+            {game.competition && (
+              <span className="text-xs bg-purple-500/30 text-purple-300 px-2 py-1 rounded">
+                {game.competition.name}
+              </span>
+            )}
           </div>
           
           <div className="text-4xl font-bold tracking-wider">
@@ -68,7 +70,7 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
           </div>
 
           <div className="flex gap-2">
-            {game.status === "UPCOMING" && (
+            {game.status === "UPCOMING" && roster.length >= 7 && (
               <form action={async () => { "use server"; await startGame(id); }}>
                 <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
                   Start Game
@@ -88,14 +90,30 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
 
       <main className="max-w-7xl mx-auto p-4">
         {game.status === "UPCOMING" && (
-          <RosterSetup 
-            gameId={id} 
-            roster={roster} 
-            availablePlayers={availablePlayers}
-            presets={presets}
-          />
+          <>
+            {allPlayers.length === 0 ? (
+              <div className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-8 text-center">
+                <h3 className="text-lg font-medium text-yellow-400 mb-2">No players in your team</h3>
+                <p className="text-yellow-400/80 mb-4">Add players to your roster before setting up a game.</p>
+                <Link
+                  href="/players"
+                  className="inline-flex px-4 py-2 bg-yellow-500 text-gray-900 rounded-lg hover:bg-yellow-400 font-medium"
+                >
+                  Add Players
+                </Link>
+              </div>
+            ) : (
+              <RosterSetup 
+                gameId={id} 
+                roster={roster} 
+                availablePlayers={availablePlayers}
+                presets={presets}
+              />
+            )}
+          </>
         )}
 
+        {/* LIVE: Stat Tracking */}
         {game.status === "LIVE" && roster.length > 0 && (
           <LiveTracker 
             gameId={id} 
@@ -107,6 +125,14 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
           />
         )}
 
+        {game.status === "LIVE" && roster.length === 0 && (
+          <div className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-8 text-center">
+            <h3 className="text-lg font-medium text-yellow-400 mb-2">No players in game roster</h3>
+            <p className="text-yellow-400/80">The game was started without a roster. End the game and set up the roster first.</p>
+          </div>
+        )}
+
+        {/* ENDED: Game Summary */}
         {game.status === "ENDED" && (
           <div className="space-y-6">
             <div className="bg-gray-800 rounded-xl p-6">
@@ -116,34 +142,42 @@ export default async function GamePage({ params }: { params: Promise<{ gameId: s
                 <span className="text-gray-500 mx-4">-</span>
                 <span className="text-red-400">{game.opponentScore}</span>
               </div>
+              <div className="text-center text-gray-400">
+                {new Date(game.date).toLocaleDateString()} • {game.location || "No location"}
+              </div>
             </div>
             
             <div className="bg-gray-800 rounded-xl p-6">
               <h2 className="text-xl font-semibold mb-4">Event Log</h2>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {stats.map((stat) => (
-                  <div key={stat.id} className="flex justify-between items-center py-2 border-b border-gray-700">
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2 py-1 text-xs rounded font-medium ${
-                        stat.type === "GOAL" ? "bg-green-500/20 text-green-400" :
-                        stat.type === "EXCLUSION" ? "bg-red-500/20 text-red-400" :
-                        "bg-gray-700 text-gray-300"
-                      }`}>
-                        {stat.type}
-                      </span>
-                      <span>{stat.player.name}</span>
+              {stats.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No events recorded for this game
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {stats.map((stat) => (
+                    <div key={stat.id} className="flex justify-between items-center py-2 border-b border-gray-700">
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2 py-1 text-xs rounded font-medium ${
+                          stat.type === "GOAL" ? "bg-green-500/20 text-green-400" :
+                          stat.type === "ASSIST" ? "bg-purple-500/20 text-purple-400" :
+                          stat.type === "EXCLUSION" ? "bg-red-500/20 text-red-400" :
+                          stat.type === "STEAL" ? "bg-yellow-500/20 text-yellow-400" :
+                          stat.type === "BLOCK" ? "bg-orange-500/20 text-orange-400" :
+                          stat.type === "SAVE" ? "bg-cyan-500/20 text-cyan-400" :
+                          stat.type === "TURNOVER" ? "bg-gray-500/20 text-gray-400" :
+                          "bg-gray-700 text-gray-300"
+                        }`}>
+                          {stat.type}
+                        </span>
+                        <span>{stat.player.name}</span>
+                      </div>
+                      {stat.period && <span className="text-gray-500">Q{stat.period}</span>}
                     </div>
-                    {stat.period && <span className="text-gray-500">P{stat.period}</span>}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        )}
-
-        {game.status === "LIVE" && roster.length === 0 && (
-          <div className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-6 text-center">
-            <p className="text-yellow-400">No players in roster. Add players before tracking stats.</p>
           </div>
         )}
       </main>

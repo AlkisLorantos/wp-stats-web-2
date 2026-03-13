@@ -22,7 +22,6 @@ export default async function DashboardPage() {
       <Navbar username={user.username} />
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Welcome message for new users */}
         {hasNoGames && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-8">
             <EmptyState
@@ -33,7 +32,6 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* Live Games */}
         {liveGames.length > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -73,7 +71,6 @@ export default async function DashboardPage() {
 
         {!hasNoGames && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Upcoming Games */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">Upcoming Games</h2>
@@ -119,8 +116,6 @@ export default async function DashboardPage() {
                 </div>
               )}
             </div>
-
-            {/* Recent Results */}
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">Recent Results</h2>

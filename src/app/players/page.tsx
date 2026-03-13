@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { PlayerCapInput } from "@/components/player-cap-input";
 import { PlayerPositionInput } from "@/components/player-position-input";
+import { EmptyState } from "@/components/ui/empty-state";
 
 async function updateCapNumber(playerId: number, capNumber: number | null) {
   "use server";
@@ -36,7 +37,6 @@ export default async function PlayersPage() {
       <Navbar username={user.username} />
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-bold">Team Roster</h1>
@@ -83,9 +83,11 @@ export default async function PlayersPage() {
         </form>
 
         {players.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            <p className="text-lg">No players yet</p>
-            <p className="text-sm mt-1">Add your first player above</p>
+          <div className="bg-gray-50 border border-gray-200 rounded-xl">
+            <EmptyState
+              title="No players yet"
+              description="Add your first player using the form above to get started"
+            />
           </div>
         ) : (
           <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -163,7 +165,6 @@ export default async function PlayersPage() {
           </div>
         )}
 
-        {/* Legend */}
         {players.length > 0 && (
           <div className="flex items-center gap-6 text-sm text-gray-500">
             <div className="flex items-center gap-2">
