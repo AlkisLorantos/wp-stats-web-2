@@ -3,7 +3,8 @@ import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { PlayerStats } from "@/types";
-import { Navbar } from "@/components/Navbar";
+import { Navbar } from "@/components/navbar";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function PlayerPage({ params }: { params: Promise<{ playerId: string }> }) {
   const user = await getUser();
@@ -19,68 +20,79 @@ export default async function PlayerPage({ params }: { params: Promise<{ playerI
     ? Math.round((playerStats.goals / playerStats.shots) * 100) 
     : 0;
 
+  const isGoalkeeper = player.capNumber === 1 || player.capNumber === 13;
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
-            <Navbar username={user.username} />
-      
-      <header className="bg-gray-100 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link href="/players" className="text-gray-500 hover:text-gray-900">
-              ← Back
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">{player.name}</h1>
-              <p className="text-gray-500 text-sm">
-                #{player.capNumber} • {player.position || "No position"}
-              </p>
-            </div>
+      <Navbar username={user.username} />
+
+      <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href="/players" className="text-gray-400 hover:text-gray-600">
+            ← Back
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold ${
+            isGoalkeeper 
+              ? "bg-red-100 text-red-700 border-2 border-red-300" 
+              : player.capNumber 
+                ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
+                : "bg-gray-100 text-gray-500 border-2 border-gray-200"
+          }`}>
+            {player.capNumber || "?"}
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">{player.name}</h1>
+            <p className="text-gray-500">
+              {player.position || "No position assigned"}
+              {isGoalkeeper && <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">GK</span>}
+            </p>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-          <h2 className="text-xl font-semibold mb-4">Stats</h2>
+          <h2 className="text-lg font-semibold mb-4">Career Stats</h2>
           
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center shadow-sm">
-              <div className="text-3xl font-bold text-green-600">{playerStats.goals}</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">{playerStats.goals}</div>
               <div className="text-sm text-gray-500">Goals</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center shadow-sm">
-              <div className="text-3xl font-bold text-purple-600">{playerStats.assists}</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600">{playerStats.assists}</div>
               <div className="text-sm text-gray-500">Assists</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center shadow-sm">
-              <div className="text-3xl font-bold text-blue-600">{shootingPct}%</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">{shootingPct}%</div>
               <div className="text-sm text-gray-500">Shooting %</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center shadow-sm">
-              <div className="text-3xl font-bold text-yellow-600">{playerStats.steals}</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-yellow-600">{playerStats.steals}</div>
               <div className="text-sm text-gray-500">Steals</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center shadow-sm">
-              <div className="text-3xl font-bold text-orange-600">{playerStats.blocks}</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-orange-600">{playerStats.blocks}</div>
               <div className="text-sm text-gray-500">Blocks</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center shadow-sm">
-              <div className="text-3xl font-bold text-cyan-600">{playerStats.saves}</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-cyan-600">{playerStats.saves}</div>
               <div className="text-sm text-gray-500">Saves</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center shadow-sm">
-              <div className="text-3xl font-bold text-red-600">{playerStats.exclusions}</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-red-600">{playerStats.exclusions}</div>
               <div className="text-sm text-gray-500">Exclusions</div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center shadow-sm">
-              <div className="text-3xl font-bold text-gray-600">{playerStats.turnovers}</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-gray-600">{playerStats.turnovers}</div>
               <div className="text-sm text-gray-500">Turnovers</div>
             </div>
           </div>
         </div>
 
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-          <h2 className="text-xl font-semibold mb-4">Game Log</h2>
+          <h2 className="text-lg font-semibold mb-4">Game Log</h2>
           
           {player.games && player.games.length > 0 ? (
             <div className="overflow-x-auto">
@@ -94,6 +106,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ playerI
                     <th className="text-center py-3 px-2">S%</th>
                     <th className="text-center py-3 px-2">ST</th>
                     <th className="text-center py-3 px-2">BL</th>
+                    <th className="text-center py-3 px-2">SV</th>
                     <th className="text-center py-3 px-2">EX</th>
                   </tr>
                 </thead>
@@ -105,11 +118,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ playerI
                     
                     return (
                       <tr key={game.gameId} className="border-b border-gray-200 hover:bg-gray-100">
-                        <td className="py-3 px-2">
+                        <td className="py-3 px-2 text-gray-500">
                           {new Date(game.date).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-2">
-                          <Link href={`/games/${game.gameId}`} className="hover:text-blue-600">
+                          <Link href={`/games/${game.gameId}`} className="font-medium hover:text-blue-600">
                             vs {game.opponent}
                           </Link>
                         </td>
@@ -128,6 +141,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ playerI
                         <td className="text-center py-3 px-2 text-orange-600">
                           {game.blocks || "-"}
                         </td>
+                        <td className="text-center py-3 px-2 text-cyan-600">
+                          {game.saves || "-"}
+                        </td>
                         <td className="text-center py-3 px-2 text-red-600">
                           {game.exclusions || "-"}
                         </td>
@@ -138,7 +154,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ playerI
               </table>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No games played yet</p>
+            <EmptyState
+              title="No games played yet"
+              description="Stats will appear here after the player participates in a game"
+            />
           )}
         </div>
       </main>
