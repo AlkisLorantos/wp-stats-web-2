@@ -2,46 +2,25 @@
 
 import { api } from "@/lib/api/fetch";
 import { revalidatePath } from "next/cache";
-
-type RosterPlayer = {
-  id: number;
-  capNumber: number;
-  playerId: number;
-  player: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    name: string;
-  };
-};
+import type { RosterPlayer } from "@/types";
 
 export async function getGameRoster(gameId: number): Promise<RosterPlayer[]> {
   return api(`games/${gameId}/roster`);
 }
 
-export async function addToRoster(gameId: number, formData: FormData) {
+export async function addToRoster(gameId: number, formData: FormData): Promise<void> {
   const playerId = Number(formData.get("playerId"));
   const capNumber = Number(formData.get("capNumber"));
 
   if (!playerId || !capNumber) {
-    return { error: "Player and cap number are required" };
+    throw new Error("Player and cap number are required");
   }
 
-  try {
-    await api(`games/${gameId}/roster`, "POST", { playerId, capNumber });
-    revalidatePath(`/games/${gameId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message || "Failed to add player to roster" };
-  }
+  await api(`games/${gameId}/roster`, "POST", { playerId, capNumber });
+  revalidatePath(`/games/${gameId}`);
 }
 
-export async function removeFromRoster(gameId: number, rosterId: number) {
-  try {
-    await api(`games/${gameId}/roster/${rosterId}`, "DELETE");
-    revalidatePath(`/games/${gameId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message || "Failed to remove player" };
-  }
+export async function removeFromRoster(gameId: number, rosterId: number): Promise<void> {
+  await api(`games/${gameId}/roster/${rosterId}`, "DELETE");
+  revalidatePath(`/games/${gameId}`);
 }

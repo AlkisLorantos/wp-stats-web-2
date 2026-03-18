@@ -2,24 +2,7 @@
 
 import { api } from "@/lib/api/fetch";
 import { revalidatePath } from "next/cache";
-
-type PresetPlayer = {
-  id: number;
-  capNumber: number;
-  playerId: number;
-  player: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    name: string;
-  };
-};
-
-type RosterPreset = {
-  id: number;
-  name: string;
-  players: PresetPlayer[];
-};
+import type { RosterPreset } from "@/types";
 
 export async function getPresets(): Promise<RosterPreset[]> {
   return api("roster-presets");
@@ -29,27 +12,17 @@ export async function getPreset(id: number): Promise<RosterPreset> {
   return api(`roster-presets/${id}`);
 }
 
-export async function savePreset(name: string, roster: { playerId: number; capNumber: number }[]) {
-  try {
-    await api("roster-presets", "POST", { name, roster });
-    revalidatePath("/games");
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message || "Failed to save preset" };
-  }
+export async function savePreset(name: string, roster: { playerId: number; capNumber: number }[]): Promise<void> {
+  await api("roster-presets", "POST", { name, roster });
+  revalidatePath("/games");
 }
 
-export async function deletePreset(id: number) {
-  try {
-    await api(`roster-presets/${id}`, "DELETE");
-    revalidatePath("/games");
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message || "Failed to delete preset" };
-  }
+export async function deletePreset(id: number): Promise<void> {
+  await api(`roster-presets/${id}`, "DELETE");
+  revalidatePath("/games");
 }
 
-export async function loadPresetToGame(gameId: number, presetId: number) {
+export async function loadPresetToGame(gameId: number, presetId: number): Promise<void> {
   const preset = await getPreset(presetId);
   
   for (const p of preset.players) {
@@ -60,5 +33,4 @@ export async function loadPresetToGame(gameId: number, presetId: number) {
   }
   
   revalidatePath(`/games/${gameId}`);
-  return { success: true };
 }

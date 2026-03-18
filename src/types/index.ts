@@ -3,60 +3,76 @@ export type Player = {
   name: string;
   firstName: string;
   lastName: string;
-  position?: string;
-  capNumber?: number;
-  totals?: PlayerStats;
-  games?: {
-    gameId: number;
-    date: string;
-    opponent: string;
-    goals: number;
-    assists: number;
-    shots: number;
-    steals: number;
-    blocks: number;
-    exclusions: number;
-  }[];
+  position: string | null;
+  capNumber: number | null;
+  totals: PlayerStats | null;
+  games: PlayerGameStats[] | null;
 };
+
+export type PlayerGameStats = {
+  gameId: number;
+  date: string;
+  opponent: string;
+  goals: number;
+  assists: number;
+  shots: number;
+  steals: number;
+  blocks: number;
+  saves: number;
+  exclusions: number;
+};
+
 export type RosterPlayer = {
   id: number;
   capNumber: number;
   playerId: number;
-  player: Player;
+  player: {
+    id: number;
+    name: string;
+    firstName: string;
+    lastName: string;
+    capNumber: number | null;
+  };
 };
 
 export type Game = {
   id: number;
   date: string;
   opponent: string;
-  location?: string;
-  homeOrAway?: string;
+  location: string | null;
+  homeOrAway: string | null;
   status: "UPCOMING" | "LIVE" | "ENDED";
   teamScore: number;
   opponentScore: number;
-  competition?: {
-    id: number;
-    name: string;
-    type?: string;
-    season?: string;
-  };
+  competition: Competition | null;
+};
+
+export type Competition = {
+  id: number;
+  name: string;
+  type: string | null;
+  season: string | null;
 };
 
 export type StatEvent = {
   id: number;
   type: string;
-  context?: string;
-  shotOutcome?: string;
-  period?: number;
-  clock?: number;
-  x?: number;
-  y?: number;
-  goalX?: number;
-  goalY?: number;
+  context: string | null;
+  shotOutcome: string | null;
+  period: number | null;
+  clock: number | null;
+  x: number | null;
+  y: number | null;
+  goalX: number | null;
+  goalY: number | null;
   playerId: number;
   gameId: number;
-  assistEventId?: number;
-  player: Player;
+  assistEventId: number | null;
+  player: {
+    id: number;
+    name: string;
+    capNumber: number | null;
+  };
 };
 
 export type PlayerStats = {
@@ -88,18 +104,18 @@ export type Substitution = {
 export type RosterPreset = {
   id: number;
   name: string;
-  players: {
-    id: number;
-    capNumber: number;
-    playerId: number;
-    player: Player;
-  }[];
+  players: RosterPlayer[];
 };
 
 export type LineupPlayer = {
   id: number;
   playerId: number;
-  player: Player;
+  player: {
+    id: number;
+    name: string;
+    firstName: string;
+    lastName: string;
+  };
 };
 
 export type AuthResult = {
@@ -114,11 +130,11 @@ export type ShotLocationData = {
   goalX: number;
   goalY: number;
   outcome: ShotOutcome;
-  assisterId?: number;
+  assisterId: number | null;
 };
 
 export type Position = "GK" | "LW" | "RW" | "LD" | "RD" | "CB" | "C";
 
 export type Formation = {
   [key in Position]: number | null;
-}
+};

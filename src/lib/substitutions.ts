@@ -37,14 +37,9 @@ export async function createSubstitution(
     playerInId: number;
     playerOutId: number;
   }
-) {
-  try {
-    await api(`games/${gameId}/substitutions`, "POST", data);
-    revalidatePath(`/games/${gameId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message || "Failed to record substitution" };
-  }
+): Promise<void> {
+  await api(`games/${gameId}/substitutions`, "POST", data);
+  revalidatePath(`/games/${gameId}`);
 }
 
 export async function getPlayerPlayingTime(gameId: number, playerId: number): Promise<PlayingTime> {

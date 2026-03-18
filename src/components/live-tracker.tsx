@@ -93,42 +93,6 @@ const situations = [
   { key: "PENALTY", label: "Penalty" },
 ];
 
-function PlayerButton({
-  rosterPlayer,
-  isSelected,
-  onClick,
-}: {
-  rosterPlayer: RosterPlayer;
-  isSelected: boolean;
-  onClick: () => void;
-}) {
-  const gk = isGoalkeeper(rosterPlayer.capNumber);
-
-  return (
-    <button
-      onClick={onClick}
-      className={`p-3 rounded-lg text-center transition-all ${
-        isSelected
-          ? gk
-            ? "bg-red-600 ring-2 ring-red-400 scale-105"
-            : "bg-blue-600 ring-2 ring-blue-400 scale-105"
-          : gk
-            ? "bg-red-900/40 border border-red-500 hover:bg-red-900/60"
-            : "bg-gray-700 hover:bg-gray-600"
-      }`}
-    >
-      <div
-        className={`text-2xl font-bold ${gk ? "text-red-400" : "text-white"}`}
-      >
-        {rosterPlayer.capNumber}
-      </div>
-      <div className="text-xs text-gray-300 truncate">
-        {rosterPlayer.player.name.split(" ")[0]}
-      </div>
-    </button>
-  );
-}
-
 export function LiveTracker({
   gameId,
   game,
@@ -149,9 +113,7 @@ export function LiveTracker({
   const [starting, setStarting] = useState(false);
   const [ending, setEnding] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"stats" | "subs" | "boxscore">(
-    "stats",
-  );
+  const [activeTab, setActiveTab] = useState<"stats" | "subs" | "boxscore">("stats");
   const [playerOut, setPlayerOut] = useState<number | null>(null);
   const [playerIn, setPlayerIn] = useState<number | null>(null);
 
@@ -167,12 +129,8 @@ export function LiveTracker({
     CB: null,
     C: null,
   });
-  const [selectedPosition, setSelectedPosition] = useState<Position | null>(
-    null,
-  );
-  const [assigningPosition, setAssigningPosition] = useState<Position | null>(
-    null,
-  );
+  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
+  const [assigningPosition, setAssigningPosition] = useState<Position | null>(null);
 
   const [lineupSaved, setLineupSaved] = useState<Record<number, boolean>>({
     1: false,
@@ -217,16 +175,10 @@ export function LiveTracker({
     }
   }, [period, lineups]);
 
-  const playersInFormation = Object.values(formation).filter(
-    Boolean,
-  ) as number[];
-  const onBench = roster.filter(
-    (r) => !playersInFormation.includes(r.playerId),
-  );
+  const playersInFormation = Object.values(formation).filter(Boolean) as number[];
+  const onBench = roster.filter((r) => !playersInFormation.includes(r.playerId));
 
-  const selectedRosterPlayer = roster.find(
-    (r) => r.playerId === selectedPlayer,
-  );
+  const selectedRosterPlayer = roster.find((r) => r.playerId === selectedPlayer);
   const isSelectedGK = selectedPlayer ? formation.GK === selectedPlayer : false;
 
   const eventTypes = allEventTypes.filter((e) => {
@@ -236,8 +188,7 @@ export function LiveTracker({
   });
 
   const canRecordStats =
-    lineupSaved[period] &&
-    Object.values(formation).filter(Boolean).length === 7;
+    lineupSaved[period] && Object.values(formation).filter(Boolean).length === 7;
 
   const handleRecordEvent = async (eventType: string) => {
     if (!selectedPlayer || recording || !canRecordStats) return;
@@ -264,14 +215,13 @@ export function LiveTracker({
     formData.set("clock", clockValue.toString());
     if (situation) formData.set("context", situation);
 
-    const result = await createStat(gameId, formData);
-
-    if (result.success) {
+    try {
+      await createStat(gameId, formData);
       const player = roster.find((r) => r.playerId === selectedPlayer);
-      setLastRecorded(
-        `${eventType} - #${player?.capNumber} ${player?.player.name}`,
-      );
+      setLastRecorded(`${eventType} - #${player?.capNumber} ${player?.player.name}`);
       setSelectedPlayer(null);
+    } catch (err) {
+      alert("Failed to record stat");
     }
 
     setRecording(false);
@@ -292,25 +242,24 @@ export function LiveTracker({
 
     const clockValue = minutes + seconds / 60;
 
-    const result = await createShotWithLocation(gameId, {
-      playerId: shotPlayer.playerId,
-      x: data.poolX,
-      y: data.poolY,
-      goalX: data.goalX,
-      goalY: data.goalY,
-      shotOutcome: data.outcome,
-      assisterId: data.assisterId,
-      period,
-      clock: clockValue,
-      context: situation || undefined,
-    });
+    try {
+      await createShotWithLocation(gameId, {
+        playerId: shotPlayer.playerId,
+        x: data.poolX,
+        y: data.poolY,
+        goalX: data.goalX,
+        goalY: data.goalY,
+        shotOutcome: data.outcome,
+        assisterId: data.assisterId,
+        period,
+        clock: clockValue,
+        context: situation || undefined,
+      });
 
-    if (result.success) {
-      const outcomeText =
-        data.outcome === "GOAL" ? "GOAL" : `SHOT (${data.outcome})`;
-      setLastRecorded(
-        `${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`,
-      );
+      const outcomeText = data.outcome === "GOAL" ? "GOAL" : `SHOT (${data.outcome})`;
+      setLastRecorded(`${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`);
+    } catch (err) {
+      alert("Failed to record shot");
     }
 
     setShotPlayer(null);
@@ -320,12 +269,20 @@ export function LiveTracker({
   const handleUndo = async () => {
     if (stats.length === 0) return;
     const lastStat = stats[stats.length - 1];
-    await deleteStat(gameId, lastStat.id);
-    setLastRecorded(null);
+    try {
+      await deleteStat(gameId, lastStat.id);
+      setLastRecorded(null);
+    } catch (err) {
+      alert("Failed to undo");
+    }
   };
 
   const handleDelete = async (statId: number) => {
-    await deleteStat(gameId, statId);
+    try {
+      await deleteStat(gameId, statId);
+    } catch (err) {
+      alert("Failed to delete");
+    }
   };
 
   const handleEdit = (stat: StatEvent) => {
@@ -346,18 +303,20 @@ export function LiveTracker({
 
     const clockValue = minutes + seconds / 60;
 
-    const result = await updateStat(gameId, editingEvent.id, {
-      playerId: selectedPlayer,
-      type: eventType,
-      period,
-      clock: clockValue,
-      context: situation || undefined,
-    });
+    try {
+      await updateStat(gameId, editingEvent.id, {
+        playerId: selectedPlayer,
+        type: eventType,
+        period,
+        clock: clockValue,
+        context: situation || undefined,
+      });
 
-    if (result.success) {
       setEditingEvent(null);
       setSelectedPlayer(null);
       setSituation("");
+    } catch (err) {
+      alert("Failed to update stat");
     }
 
     setRecording(false);
@@ -383,10 +342,10 @@ export function LiveTracker({
     }
 
     setStarting(true);
-    const result = await startGame(gameId);
-
-    if (result.error) {
-      alert(result.error);
+    try {
+      await startGame(gameId);
+    } catch (err: any) {
+      alert(err.message || "Failed to start game");
     }
     setStarting(false);
   };
@@ -395,10 +354,10 @@ export function LiveTracker({
     if (!confirm("Are you sure you want to end this game?")) return;
 
     setEnding(true);
-    const result = await endGame(gameId);
-
-    if (result.error) {
-      alert(result.error);
+    try {
+      await endGame(gameId);
+    } catch (err: any) {
+      alert(err.message || "Failed to end game");
     }
     setEnding(false);
   };
@@ -411,12 +370,11 @@ export function LiveTracker({
       return;
     }
 
-    const result = await saveStartingLineup(gameId, period, playerIds);
-
-    if (result.success) {
+    try {
+      await saveStartingLineup(gameId, period, playerIds);
       setLineupSaved((prev) => ({ ...prev, [period]: true }));
-    } else {
-      alert(result.error || "Failed to save lineup");
+    } catch (err: any) {
+      alert(err.message || "Failed to save lineup");
     }
   };
 
@@ -425,14 +383,14 @@ export function LiveTracker({
 
     const clockValue = minutes * 60 + seconds;
 
-    const result = await createSubstitution(gameId, {
-      period,
-      time: clockValue,
-      playerInId: playerIn,
-      playerOutId: playerOut,
-    });
+    try {
+      await createSubstitution(gameId, {
+        period,
+        time: clockValue,
+        playerInId: playerIn,
+        playerOutId: playerOut,
+      });
 
-    if (result.success) {
       setFormation((prev) => ({
         ...prev,
         [selectedPosition]: playerIn,
@@ -440,6 +398,8 @@ export function LiveTracker({
       setPlayerIn(null);
       setPlayerOut(null);
       setSelectedPosition(null);
+    } catch (err) {
+      alert("Failed to record substitution");
     }
   };
 
@@ -827,9 +787,7 @@ export function LiveTracker({
 
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {stats.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No events yet
-                  </p>
+                  <p className="text-gray-500 text-center py-8">No events yet</p>
                 ) : (
                   [...stats].reverse().map((stat) => (
                     <div
@@ -1036,9 +994,7 @@ export function LiveTracker({
                     >
                       <span className="text-red-400">{sub.playerOut.name}</span>
                       <span className="text-gray-400 mx-2">→</span>
-                      <span className="text-green-400">
-                        {sub.playerIn.name}
-                      </span>
+                      <span className="text-green-400">{sub.playerIn.name}</span>
                       <span className="text-gray-500 ml-2">
                         Q{sub.period} {formatSeconds(sub.time)}
                       </span>

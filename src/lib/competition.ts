@@ -18,32 +18,22 @@ export async function getCompetition(id: number): Promise<Competition> {
   return api(`competitions/${id}`);
 }
 
-export async function createCompetition(formData: FormData) {
+export async function createCompetition(formData: FormData): Promise<void> {
   const name = formData.get("name") as string;
   const type = formData.get("type") as string;
   const season = formData.get("season") as string;
 
   if (!name) {
-    return { error: "Name is required" };
+    throw new Error("Name is required");
   }
 
-  try {
-    await api("competitions", "POST", { name, type, season });
-    revalidatePath("/competitions");
-    revalidatePath("/games");
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message || "Failed to create competition" };
-  }
+  await api("competitions", "POST", { name, type, season });
+  revalidatePath("/competitions");
+  revalidatePath("/games");
 }
 
-export async function deleteCompetition(id: number) {
-  try {
-    await api(`competitions/${id}`, "DELETE");
-    revalidatePath("/competitions");
-    revalidatePath("/games");
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message || "Failed to delete competition" };
-  }
+export async function deleteCompetition(id: number): Promise<void> {
+  await api(`competitions/${id}`, "DELETE");
+  revalidatePath("/competitions");
+  revalidatePath("/games");
 }

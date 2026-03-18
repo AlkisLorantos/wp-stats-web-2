@@ -114,7 +114,7 @@ export default async function PlayersPage() {
                       <td className="py-2 px-4">
                         <PlayerCapInput
                           playerId={player.id}
-                          capNumber={player.capNumber}
+                          capNumber={player.capNumber ?? null}
                           isGoalkeeper={isGoalkeeper}
                           updateAction={updateCapNumber}
                         />

@@ -18,15 +18,10 @@ export async function getStartingLineup(gameId: number, period: number): Promise
   return api(`games/${gameId}/starting-lineup/${period}`);
 }
 
-export async function saveStartingLineup(gameId: number, period: number, playerIds: number[]) {
-  try {
-    await api(`games/${gameId}/starting-lineup`, "POST", {
-      period,
-      lineup: playerIds.map((playerId) => ({ playerId })),
-    });
-    revalidatePath(`/games/${gameId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message || "Failed to save lineup" };
-  }
+export async function saveStartingLineup(gameId: number, period: number, playerIds: number[]): Promise<void> {
+  await api(`games/${gameId}/starting-lineup`, "POST", {
+    period,
+    lineup: playerIds.map((playerId) => ({ playerId })),
+  });
+  revalidatePath(`/games/${gameId}`);
 }

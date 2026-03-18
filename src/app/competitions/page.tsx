@@ -1,4 +1,4 @@
-import { getCompetitions, createCompetition, deleteCompetition } from "@/lib/competitions";
+import { getCompetitions, createCompetition, deleteCompetition } from "@/lib/competition";
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/navbar";
