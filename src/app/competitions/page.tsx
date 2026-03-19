@@ -1,8 +1,8 @@
 import { getCompetitions, createCompetition, deleteCompetition } from "@/lib/competition";
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/components/navbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Navbar } from "@/app/components/navbar";
+import { EmptyState } from "@/app/components/ui/empty-state";
 
 export default async function CompetitionsPage() {
   const user = await getUser();

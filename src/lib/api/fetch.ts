@@ -25,13 +25,26 @@ export async function api<T>(
     options.body = JSON.stringify(data);
   }
 
-  const res = await fetch(`${API_URL}/${route}`, options);
+  try {
+    const res = await fetch(`${API_URL}/${route}`, options);
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || `Error ${res.status}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status >= 500) {
+        console.error("Server error:", err);
+        throw new Error("Something went wrong. Please try again.");
+      }
+      throw new Error(err.message || `Error ${res.status}`);
+    }
+
+    const payload = await res.json();
+    return payload.data != null ? payload.data : payload;
+  } catch (error) {
+
+    if (error instanceof TypeError && error.message === "fetch failed") {
+      console.error("Network error:", error);
+      throw new Error("Unable to connect to server. Please try again.");
+    }
+    throw error;
   }
-
-  const payload = await res.json();
-  return payload.data != null ? payload.data : payload;
 }

@@ -2,8 +2,8 @@ import { getTeamStats } from "@/lib/teamStats";
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Navbar } from "@/components/navbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Navbar } from "@/app/components/navbar";
+import { EmptyState } from "@/app/components/ui/empty-state";
 
 export default async function StatsPage() {
   const user = await getUser();

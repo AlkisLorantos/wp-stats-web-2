@@ -1,7 +1,7 @@
 import { getUserInfo, getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Navbar } from "@/components/navbar";
-import { ProfileForm } from "@/components/profile";
+import { Navbar } from "@/app/components/navbar";
+import { ProfileForm } from "@/app/components/profile";
 
 export default async function ProfilePage() {
   const user = await getUser();

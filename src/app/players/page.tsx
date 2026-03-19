@@ -2,10 +2,10 @@ import { getPlayers, createPlayer, deletePlayer, updatePlayer } from "@/lib/play
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Navbar } from "@/components/navbar";
-import { PlayerCapInput } from "@/components/player-cap-input";
-import { PlayerPositionInput } from "@/components/player-position-input";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Navbar } from "@/app/components/navbar";
+import { PlayerCapInput } from "@/app/components/player-cap-input";
+import { PlayerPositionInput } from "@/app/components/player-position-input";
+import { EmptyState } from "@/app/components/ui/empty-state";
 
 async function updateCapNumber(playerId: number, capNumber: number | null) {
   "use server";

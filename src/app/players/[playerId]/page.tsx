@@ -3,8 +3,8 @@ import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { PlayerStats } from "@/types";
-import { Navbar } from "@/components/navbar";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Navbar } from "@/app/components/navbar";
+import { EmptyState } from "@/app/components/ui/empty-state";
 
 export default async function PlayerPage({ params }: { params: Promise<{ playerId: string }> }) {
   const user = await getUser();

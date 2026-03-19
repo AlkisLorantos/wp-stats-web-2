@@ -8,8 +8,8 @@ import { getStartingLineup } from "@/lib/lineup";
 import { getPresets } from "@/lib/rosterPreset";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LiveTracker } from "@/components/live-tracker";
-import { RosterSetup } from "@/components/roster-setup";
+import { LiveTracker } from "@/app/components/live-tracker";
+import { RosterSetup } from "@/app/components/roster-setup";
 
 export default async function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
   const user = await getUser();
