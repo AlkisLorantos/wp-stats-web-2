@@ -22,9 +22,9 @@ export async function createStat(gameId: number, formData: FormData): Promise<vo
   await api(`games/${gameId}/stats`, "POST", {
     playerId,
     type,
-    context: context || null,
-    period: period || null,
-    clock: clock || null,
+    context: context && context !== "" ? context : undefined,
+    period: period || undefined,
+    clock: clock ?? undefined,
   });
   revalidatePath(`/games/${gameId}`);
 }
@@ -44,7 +44,10 @@ export async function createShotWithLocation(
     context?: string;
   }
 ): Promise<void> {
-  await api(`games/${gameId}/stats/shot`, "POST", data);
+  await api(`games/${gameId}/stats/shot`, "POST", {
+    ...data,
+    context: data.context && data.context !== "" ? data.context : undefined,
+  });
   revalidatePath(`/games/${gameId}`);
 }
 
