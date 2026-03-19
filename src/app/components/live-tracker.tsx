@@ -187,8 +187,7 @@ export function LiveTracker({
     return true;
   });
 
-  const canRecordStats =
-    lineupSaved[period] && Object.values(formation).filter(Boolean).length === 7;
+  const canRecordStats = Object.values(formation).filter(Boolean).length > 0;
 
   const handleRecordEvent = async (eventType: string) => {
     if (!selectedPlayer || recording || !canRecordStats) return;
