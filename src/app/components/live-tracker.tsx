@@ -113,11 +113,14 @@ export function LiveTracker({
   const [starting, setStarting] = useState(false);
   const [ending, setEnding] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"stats" | "subs" | "boxscore">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "subs" | "boxscore">(
+    "stats",
+  );
   const [playerOut, setPlayerOut] = useState<number | null>(null);
   const [playerIn, setPlayerIn] = useState<number | null>(null);
 
   const [showShotModal, setShowShotModal] = useState(false);
+  const [isGoalShot, setIsGoalShot] = useState(false);
   const [shotPlayer, setShotPlayer] = useState<RosterPlayer | null>(null);
 
   const [formation, setFormation] = useState<Formation>({
@@ -129,8 +132,12 @@ export function LiveTracker({
     CB: null,
     C: null,
   });
-  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
-  const [assigningPosition, setAssigningPosition] = useState<Position | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<Position | null>(
+    null,
+  );
+  const [assigningPosition, setAssigningPosition] = useState<Position | null>(
+    null,
+  );
 
   const [lineupSaved, setLineupSaved] = useState<Record<number, boolean>>({
     1: false,
@@ -175,10 +182,16 @@ export function LiveTracker({
     }
   }, [period, lineups]);
 
-  const playersInFormation = Object.values(formation).filter(Boolean) as number[];
-  const onBench = roster.filter((r) => !playersInFormation.includes(r.playerId));
+  const playersInFormation = Object.values(formation).filter(
+    Boolean,
+  ) as number[];
+  const onBench = roster.filter(
+    (r) => !playersInFormation.includes(r.playerId),
+  );
 
-  const selectedRosterPlayer = roster.find((r) => r.playerId === selectedPlayer);
+  const selectedRosterPlayer = roster.find(
+    (r) => r.playerId === selectedPlayer,
+  );
   const isSelectedGK = selectedPlayer ? formation.GK === selectedPlayer : false;
 
   const eventTypes = allEventTypes.filter((e) => {
@@ -198,6 +211,7 @@ export function LiveTracker({
       const player = roster.find((r) => r.playerId === selectedPlayer);
       if (player) {
         setShotPlayer(player);
+        setIsGoalShot(eventType === "GOAL");
         setShowShotModal(true);
         setSelectedPlayer(null);
       }
@@ -217,7 +231,9 @@ export function LiveTracker({
     try {
       await createStat(gameId, formData);
       const player = roster.find((r) => r.playerId === selectedPlayer);
-      setLastRecorded(`${eventType} - #${player?.capNumber} ${player?.player.name}`);
+      setLastRecorded(
+        `${eventType} - #${player?.capNumber} ${player?.player.name}`,
+      );
       setSelectedPlayer(null);
     } catch (err) {
       alert("Failed to record stat");
@@ -255,8 +271,11 @@ export function LiveTracker({
         context: situation || undefined,
       });
 
-      const outcomeText = data.outcome === "GOAL" ? "GOAL" : `SHOT (${data.outcome})`;
-      setLastRecorded(`${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`);
+      const outcomeText =
+        data.outcome === "GOAL" ? "GOAL" : `SHOT (${data.outcome})`;
+      setLastRecorded(
+        `${outcomeText} - #${shotPlayer.capNumber} ${shotPlayer.player.name}`,
+      );
     } catch (err) {
       alert("Failed to record shot");
     }
@@ -453,14 +472,17 @@ export function LiveTracker({
   return (
     <div className="space-y-4">
       <ShotLocationModal
+        key={showShotModal ? "open" : "closed"}
         isOpen={showShotModal}
         onClose={() => {
           setShowShotModal(false);
           setShotPlayer(null);
+          setIsGoalShot(false);
         }}
         onSubmit={handleShotSubmit}
         scorer={shotPlayer!}
         roster={roster}
+        isGoal={isGoalShot}
       />
       <div className="bg-gray-800 rounded-xl p-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -786,7 +808,9 @@ export function LiveTracker({
 
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {stats.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No events yet</p>
+                  <p className="text-gray-500 text-center py-8">
+                    No events yet
+                  </p>
                 ) : (
                   [...stats].reverse().map((stat) => (
                     <div
@@ -993,7 +1017,9 @@ export function LiveTracker({
                     >
                       <span className="text-red-400">{sub.playerOut.name}</span>
                       <span className="text-gray-400 mx-2">→</span>
-                      <span className="text-green-400">{sub.playerIn.name}</span>
+                      <span className="text-green-400">
+                        {sub.playerIn.name}
+                      </span>
                       <span className="text-gray-500 ml-2">
                         Q{sub.period} {formatSeconds(sub.time)}
                       </span>

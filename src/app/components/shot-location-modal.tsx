@@ -19,23 +19,22 @@ type Props = {
   }) => void;
   scorer: RosterPlayer;
   roster: RosterPlayer[];
+  isGoal?: boolean;
 };
 
 const outcomes = [
-  { key: "GOAL", label: "Goal", color: "bg-green-600 hover:bg-green-700" },
   { key: "SAVED", label: "Saved", color: "bg-yellow-600 hover:bg-yellow-700" },
   { key: "MISSED", label: "Missed", color: "bg-gray-600 hover:bg-gray-700" },
   { key: "BLOCKED", label: "Blocked", color: "bg-orange-600 hover:bg-orange-700" },
   { key: "POST", label: "Post", color: "bg-red-600 hover:bg-red-700" },
 ];
 
-export function ShotLocationModal({ isOpen, onClose, onSubmit, scorer, roster }: Props) {
+export function ShotLocationModal({ isOpen, onClose, onSubmit, scorer, roster, isGoal = false }: Props) {
   const [step, setStep] = useState<"pool" | "goal" | "outcome" | "assist">("pool");
   const [poolX, setPoolX] = useState<number | undefined>();
   const [poolY, setPoolY] = useState<number | undefined>();
   const [goalX, setGoalX] = useState<number | undefined>();
   const [goalY, setGoalY] = useState<number | undefined>();
-  const [outcome, setOutcome] = useState<string | undefined>();
 
   if (!isOpen) return null;
 
@@ -49,17 +48,20 @@ export function ShotLocationModal({ isOpen, onClose, onSubmit, scorer, roster }:
     setGoalY(y);
   };
 
-  const handleOutcomeSelect = (selectedOutcome: string) => {
-    setOutcome(selectedOutcome);
-    if (selectedOutcome === "GOAL") {
+  const handleGoalLocationNext = () => {
+    if (isGoal) {
       setStep("assist");
     } else {
-      submitAndClose(selectedOutcome, undefined);
+      setStep("outcome");
     }
   };
 
+  const handleOutcomeSelect = (selectedOutcome: string) => {
+    submitAndClose(selectedOutcome, undefined);
+  };
+
   const handleAssistSelect = (assisterId: number | null) => {
-    submitAndClose(outcome!, assisterId || undefined);
+    submitAndClose("GOAL", assisterId || undefined);
   };
 
   const submitAndClose = (finalOutcome: string, assisterId?: number) => {
@@ -80,7 +82,6 @@ export function ShotLocationModal({ isOpen, onClose, onSubmit, scorer, roster }:
     setPoolY(undefined);
     setGoalX(undefined);
     setGoalY(undefined);
-    setOutcome(undefined);
   };
 
   const handleClose = () => {
@@ -91,12 +92,15 @@ export function ShotLocationModal({ isOpen, onClose, onSubmit, scorer, roster }:
   const canProceedFromPool = poolX !== undefined && poolY !== undefined;
   const canProceedFromGoal = goalX !== undefined && goalY !== undefined;
 
+  const steps = isGoal ? ["pool", "goal", "assist"] : ["pool", "goal", "outcome"];
+  const currentStepIndex = steps.indexOf(step === "assist" && !isGoal ? "outcome" : step);
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
-            Shot by #{scorer.capNumber} {scorer.player.name}
+            {isGoal ? "Goal" : "Shot"} by #{scorer.capNumber} {scorer.player.name}
           </h2>
           <button
             onClick={handleClose}
@@ -107,13 +111,11 @@ export function ShotLocationModal({ isOpen, onClose, onSubmit, scorer, roster }:
         </div>
 
         <div className="flex gap-2 mb-6">
-          {["pool", "goal", "outcome", "assist"].map((s, i) => (
+          {steps.map((s, i) => (
             <div
               key={s}
               className={`flex-1 h-1 rounded ${
-                ["pool", "goal", "outcome", "assist"].indexOf(step) >= i
-                  ? "bg-blue-500"
-                  : "bg-gray-600"
+                currentStepIndex >= i ? "bg-blue-500" : "bg-gray-600"
               }`}
             />
           ))}
@@ -159,17 +161,17 @@ export function ShotLocationModal({ isOpen, onClose, onSubmit, scorer, roster }:
                 Back
               </button>
               <button
-                onClick={() => setStep("outcome")}
+                onClick={handleGoalLocationNext}
                 disabled={!canProceedFromGoal}
                 className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next: Outcome
+                {isGoal ? "Next: Assist" : "Next: Outcome"}
               </button>
             </div>
           </>
         )}
 
-        {step === "outcome" && (
+        {step === "outcome" && !isGoal && (
           <>
             <h3 className="text-lg font-medium mb-4">What was the outcome?</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -220,7 +222,7 @@ export function ShotLocationModal({ isOpen, onClose, onSubmit, scorer, roster }:
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setStep("outcome")}
+                onClick={() => setStep(isGoal ? "goal" : "outcome")}
                 className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium"
               >
                 Back
