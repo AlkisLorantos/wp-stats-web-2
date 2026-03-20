@@ -615,21 +615,7 @@ export function LiveTracker({
         </div>
       )}
 
-      {game.status === "LIVE" && (
-        <div className="bg-green-500/20 border border-green-500 rounded-xl p-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            <span className="text-green-400 font-medium">Game is LIVE</span>
-          </div>
-          <button
-            onClick={handleEndGame}
-            disabled={ending}
-            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium disabled:opacity-50"
-          >
-            {ending ? "Ending..." : "End Game"}
-          </button>
-        </div>
-      )}
+
 
       {game.status === "ENDED" && (
         <div className="bg-gray-500/20 border border-gray-500 rounded-xl p-4 flex justify-between items-center">
