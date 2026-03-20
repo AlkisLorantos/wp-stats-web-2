@@ -6,6 +6,7 @@ import { Navbar } from "@/app/components/navbar";
 import { PlayerCapInput } from "@/app/components/player-cap-input";
 import { PlayerPositionInput } from "@/app/components/player-position-input";
 import { EmptyState } from "@/app/components/ui/empty-state";
+import { LoadingButton } from "@/app/components/ui/loading-button";
 
 async function updateCapNumber(playerId: number, capNumber: number | null) {
   "use server";
@@ -73,12 +74,12 @@ export default async function PlayersPage() {
               placeholder="Cap #"
               className="w-20 px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
             />
-            <button
-              type="submit"
+            <LoadingButton
               className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              loadingText="Adding..."
             >
               Add Player
-            </button>
+            </LoadingButton>
           </div>
         </form>
 
@@ -148,12 +149,12 @@ export default async function PlayersPage() {
                               await deletePlayer(player.id);
                             }}
                           >
-                            <button
-                              type="submit"
+                            <LoadingButton
                               className="px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              loadingText="..."
                             >
                               Delete
-                            </button>
+                            </LoadingButton>
                           </form>
                         </div>
                       </td>

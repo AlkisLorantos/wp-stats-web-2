@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/app/components/navbar";
 import { EmptyState } from "@/app/components/ui/empty-state";
+import { LoadingButton } from "@/app/components/ui/loading-button";
 
 export default async function GamesPage() {
   const user = await getUser();
@@ -64,12 +65,12 @@ export default async function GamesPage() {
                   </option>
                 ))}
               </select>
-              <button
-                type="submit"
+              <LoadingButton
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                loadingText="Adding..."
               >
                 Add Game
-              </button>
+              </LoadingButton>
             </div>
             {competitions.length === 0 && (
               <p className="text-sm text-gray-500 mt-2">
@@ -129,12 +130,12 @@ export default async function GamesPage() {
                         await deleteGame(game.id);
                       }}
                     >
-                      <button
-                        type="submit"
+                      <LoadingButton
                         className="px-3 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                        loadingText="..."
                       >
                         Delete
-                      </button>
+                      </LoadingButton>
                     </form>
                   </div>
                 </div>
@@ -218,12 +219,12 @@ export default async function GamesPage() {
                           }}
                           className="inline"
                         >
-                          <button
-                            type="submit"
+                          <LoadingButton
                             className="text-red-500 hover:text-red-700"
+                            loadingText="..."
                           >
                             Delete
-                          </button>
+                          </LoadingButton>
                         </form>
                       </td>
                     </tr>
@@ -321,12 +322,12 @@ export default async function GamesPage() {
                             }}
                             className="inline"
                           >
-                            <button
-                              type="submit"
+                            <LoadingButton
                               className="text-red-500 hover:text-red-700"
+                              loadingText="..."
                             >
                               Delete
-                            </button>
+                            </LoadingButton>
                           </form>
                         </td>
                       </tr>

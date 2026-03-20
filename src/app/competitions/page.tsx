@@ -3,6 +3,7 @@ import { getUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/app/components/navbar";
 import { EmptyState } from "@/app/components/ui/empty-state";
+import { LoadingButton } from "@/app/components/ui/loading-button";
 
 export default async function CompetitionsPage() {
   const user = await getUser();
@@ -43,12 +44,12 @@ export default async function CompetitionsPage() {
               placeholder="Season (e.g. 2024-25)"
               className="px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button
-              type="submit"
+            <LoadingButton
               className="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              loadingText="Adding..."
             >
               Add Competition
-            </button>
+            </LoadingButton>
           </div>
         </form>
 
@@ -100,12 +101,12 @@ export default async function CompetitionsPage() {
                         }}
                         className="inline"
                       >
-                        <button
-                          type="submit"
+                        <LoadingButton
                           className="text-sm text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+                          loadingText="..."
                         >
                           Delete
-                        </button>
+                        </LoadingButton>
                       </form>
                     </td>
                   </tr>
